@@ -8,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
     steps:
       - uses: actions/checkout@v4
 
@@ -23,12 +25,8 @@ jobs:
 
       - run: npm test
 
-      - run: npm publish --access public
+      - run: npm publish --access public --provenance
         working-directory: packages/service-loom-js
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - run: npm publish --access public
+      - run: npm publish --access public --provenance
         working-directory: packages/service-loom-react
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
