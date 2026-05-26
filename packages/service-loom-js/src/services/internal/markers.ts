@@ -1,0 +1,2 @@
+export const MARKER_SERVICE = Symbol('MARKER_SERVICE');
+export const MARKER_SERVICE_CLIENT = Symbol('MARKER_SERVICE_CLIENT');
