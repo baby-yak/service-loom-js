@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "test",
+      "problemMatcher": [],
+      "label": "npm: test",
+      "detail": "run all tests",
+      "options": {
+        "statusbar": {
+          "backgroundColor": "statusBarItem.warningBackground"
+        }
+      }
+    },
+    {
+      "type": "npm",
+      "script": "verify",
+      "problemMatcher": [],
+      "label": "npm: verify",
+      "detail": "run all verify",
+      "options": {
+        "statusbar": {
+          "backgroundColor": "statusBarItem.warningBackground"
+        }
+      }
+    }
+  ]
+}
