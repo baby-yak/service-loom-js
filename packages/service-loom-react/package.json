@@ -1,6 +1,6 @@
 {
   "name": "@baby-yak/service-loom-react",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "React hooks and utilities for @baby-yak/service-loom-js",
   "license": "MIT",
   "author": "its.yak@gmail.com",
