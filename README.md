@@ -1,7 +1,5 @@
 # service-loom-js
 
-1.0.0
-
 A collection of typed, reactive libraries for building event-driven applications — usable independently or composed together.
 
 ## Packages
