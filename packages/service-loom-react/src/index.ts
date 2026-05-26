@@ -1,2 +1,2 @@
-import {hello as hello1} from "@baby-yak/service-loom-js"
-export const hello = `NEW: hello from service-loom-react (importing: ${hello1})`;
+export * from './hooks/index.js';
+export * from './context/index.js';

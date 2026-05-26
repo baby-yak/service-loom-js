@@ -13,13 +13,16 @@
   "dependencies": {
     "@baby-yak/service-loom-js": "*",
     "@baby-yak/service-loom-react": "*",
+    "classnames": "^2.0.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "uuid": "^11.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
+    "@types/uuid": "^10.0.0",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "eslint": "^10.3.0",
