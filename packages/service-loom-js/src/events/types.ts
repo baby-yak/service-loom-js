@@ -11,19 +11,18 @@ export type EventListener<
   T_Event extends EventNames<T_EventMap>,
 > = CombinedEvents<T_EventMap>[T_Event];
 
-export type EventNames<T_Map extends EventMap> =
-  keyof CombinedEvents<T_Map> & string;
+export type EventNames<T_Map extends EventMap> = keyof CombinedEvents<T_Map> & string;
 
-export type EventParams<
-  T_Map extends EventMap,
-  T_Event extends EventNames<T_Map>,
-> = Parameters<CombinedEvents<T_Map>[T_Event]>;
+export type EventParams<T_Map extends EventMap, T_Event extends EventNames<T_Map>> = Parameters<
+  CombinedEvents<T_Map>[T_Event]
+>;
 
 //-------------------------------------------------------
 // config and construction
 //-------------------------------------------------------
-export type EventListenersErrorHandlingType =
-  ListenersErrorHandlingType<(event: string, error: unknown) => void>;
+export type EventListenersErrorHandlingType = ListenersErrorHandlingType<
+  (event: string, error: unknown) => void
+>;
 
 /**
  * The result of `createListenerGroup()`.
@@ -35,9 +34,7 @@ export type EventListenersErrorHandlingType =
  *   Safe to call multiple times; a second call after all listeners have been
  *   removed is a no-op.
  */
-export type EventGroupContext<
-  T_EventMap extends EventMap = EventMap,
-> = {
+export type EventGroupContext<T_EventMap extends EventMap> = {
   client: EventClient<T_EventMap>;
   detachGroup: (event?: EventNames<T_EventMap>) => void;
 };

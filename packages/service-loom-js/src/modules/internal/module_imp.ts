@@ -45,7 +45,7 @@ export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
     this.services = Object.fromEntries(
       Object.entries(services).map(([key, service]) => [key, service.client]),
     ) as ModuleClients<M>;
-       
+
     //calc longestServiceName for logging padding
     this._longestServiceName = getLongestName(services);
   }

@@ -1,6 +1,7 @@
+import type { IsAny } from 'expect-type';
 import type { ActionMap } from '../../actions/types.js';
 import type { _DESCRIPTOR_, _SHAPE_ } from '../../core/symbols.js';
-import type { Provider } from '../../core/types.js';
+import type { Empty, Provider } from '../../core/types.js';
 import type { EventMap } from '../../events/types.js';
 import type { StateMap } from '../../state/types.js';
 import type { ServiceDescriptor } from '../types.js';
@@ -36,18 +37,55 @@ export type ShapeOf<T extends ServiceDescriptor<any>> = T[typeof _SHAPE_];
 
 export type ActionsOf<T extends ServiceDescriptor<any>> =
   T extends ServiceDescriptor<infer Shape extends ServiceShape>
-    ? Shape['actions'] //
+    ? Shape extends { actions: infer A extends ActionMap }
+      ? A
+      : undefined
     : never;
 
 export type StateOf<T extends ServiceDescriptor<any>> =
   T extends ServiceDescriptor<infer Shape extends ServiceShape>
-    ? Shape['state'] //
+    ? Shape extends { state: infer S }
+      ? S
+      : undefined
     : never;
 
 export type EventsOf<T extends ServiceDescriptor<any>> =
   T extends ServiceDescriptor<infer Shape extends ServiceShape>
-    ? Shape['events'] //
+    ? Shape extends { events: infer E extends EventMap }
+      ? E
+      : undefined
     : never;
+
+// and with defaults where apply
+// undefined actions => {}
+// undefined state => undefined
+// undefined events => {}
+export type ActionsOfWithFallback<T extends ServiceDescriptor<any>> =
+  IsAny<T> extends true
+    ? any // ← Service<any> -> ActionExecuter<any> -> Map<any,any>
+    : T extends ServiceDescriptor<infer Shape extends ServiceShape>
+      ? Shape extends { actions: infer A extends ActionMap }
+        ? A
+        : Empty // <--
+      : Empty; // <--
+
+export type StateOfWithFallback<T extends ServiceDescriptor<any>> =
+  IsAny<T> extends true
+    ? any // ← Service<any> → State<any> → Map<any,any>
+    : T extends ServiceDescriptor<infer Shape extends ServiceShape>
+      ? Shape extends { state: infer S }
+        ? S
+        : undefined // <--
+      : undefined; // <<--
+
+export type EventsOfWithFallback<T extends ServiceDescriptor<any>> =
+  IsAny<T> extends true
+    ? any // ← Service<any> → Events<any> → Map<any,any>
+    : T extends ServiceDescriptor<infer Shape extends ServiceShape>
+      ? Shape extends { events: infer E extends EventMap }
+        ? E
+        : Empty // <--
+      : Empty; // <--
 
 //-- providers:
 

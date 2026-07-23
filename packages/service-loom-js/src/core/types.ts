@@ -19,7 +19,13 @@ export type Empty = Record<never, never>;
  */
 export type IsAny<T> = 0 extends 1 & T ? true : false;
 
-// export type OrEmpty<T> = T extends undefined ? Empty : T;
+export type OrEmpty<T> =
+  //
+  undefined extends T
+    ? Empty // undefined -> Empty
+    : unknown extends T
+      ? Empty // unknown -> Empty
+      : T; // pass through T
 
 /** convert type T:
  * if T is (any | never | undefined) => unknown

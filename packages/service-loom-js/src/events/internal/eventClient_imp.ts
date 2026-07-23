@@ -10,9 +10,7 @@ import type { GroupToken } from './types.js';
 
 let GROUP_COUNT = 0;
 
-export class EventClient_imp<
-  T_EventMap extends EventMap = EventMap,
-> implements EventClient<T_EventMap> {
+export class EventClient_imp<T_EventMap extends EventMap> implements EventClient<T_EventMap> {
   // the root will be
   protected readonly root: EventClient_imp<T_EventMap> | undefined;
 

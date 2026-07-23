@@ -1,3 +1,4 @@
+import type { _NOOP_ } from '../core/types.js';
 import type { StateMap } from './types.js';
 
 /**
@@ -5,7 +6,5 @@ import type { StateMap } from './types.js';
  */
 export interface RawStateClient<S extends StateMap> {
   //just make S generic be enforced by the type system:
-  [NOOP]?: S;
+  [_NOOP_]?: S;
 }
-
-const NOOP = Symbol('NOOP');

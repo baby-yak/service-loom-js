@@ -29,7 +29,7 @@ export type EventEmitterParams = {
 /**
  * container: { listener + metadata}
  */
-type Listener<T_EventMap extends EventMap = EventMap> = {
+type Listener<T_EventMap extends EventMap> = {
   groupToken: GroupToken;
   listener: EventListener<T_EventMap, EventNames<T_EventMap>>;
   postRemoved?: ((event: EventNames<T_EventMap>) => void) | undefined;
@@ -52,7 +52,7 @@ type Listener<T_EventMap extends EventMap = EventMap> = {
  * emitter.emit('userJoined', 'alice');
  * ```
  */
-export class EventEmitter<T_EventMap extends EventMap = EventMap>
+export class EventEmitter<T_EventMap extends EventMap>
   extends EventClient_imp<T_EventMap>
   implements EventClient<T_EventMap>
 {

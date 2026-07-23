@@ -31,7 +31,7 @@ export abstract class ServiceBase<
   [_STATE_] = undefined;
   [_EVENTS_] = undefined;
 
-  readonly name: string | undefined = undefined;
+  readonly name: string | undefined;
 
   readonly actions: ActionsProviderOf<Providers>;
   readonly state: StateProviderOf<Providers>;
@@ -40,10 +40,13 @@ export abstract class ServiceBase<
   readonly client: ServiceClient<Providers>;
 
   constructor(
+    name: string | undefined,
     actions: ActionsProviderOf<Providers>,
     state: StateProviderOf<Providers>,
     events: EventsProviderOf<Providers>,
   ) {
+    this.name = name;
+
     this.actions = actions;
     this.state = state;
     this.events = events;
@@ -60,9 +63,9 @@ export abstract class ServiceBase<
   //-- life cycle - optionally overridable by child classes
   //-------------------------------------------------------
 
-  async onServiceInit(): Promise<void> {}
-  async onServiceStart(): Promise<void> {}
-  async onServiceAfterStart(): Promise<void> {}
-  async onServiceBeforeStop(): Promise<void> {}
-  async onServiceStop(): Promise<void> {}
+  onServiceInit(): Promise<void> | void {}
+  onServiceStart(): Promise<void> | void {}
+  onServiceAfterStart(): Promise<void> | void {}
+  onServiceBeforeStop(): Promise<void> | void {}
+  onServiceStop(): Promise<void> | void {}
 }

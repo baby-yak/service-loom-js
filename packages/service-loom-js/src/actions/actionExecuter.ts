@@ -13,7 +13,7 @@ import type {
 //export type ActionsConstructionParams = {};
 export type ActionExecuterParams = object;
 
-export class ActionExecuter<T_Map extends ActionMap = ActionMap> implements ActionClient<T_Map> {
+export class ActionExecuter<T_Map extends ActionMap> implements ActionClient<T_Map> {
   /**
    * invoke actions with this
    */

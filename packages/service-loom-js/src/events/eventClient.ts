@@ -6,7 +6,7 @@ import type {
   EventParams,
 } from './types.js';
 
-export interface EventClient<T_EventMap extends EventMap = EventMap> {
+export interface EventClient<T_EventMap extends EventMap> {
   /**
    * Adds a listener and returns an unsubscribe function.
    * Calling the returned function removes the listener.
