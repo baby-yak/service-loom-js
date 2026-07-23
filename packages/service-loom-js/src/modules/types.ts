@@ -1,23 +1,10 @@
-import type { ServiceClient } from '../services/index.js';
-import type { RawService } from '../services/rawService.js';
-
-/** Reactive state exposed on every module. */
-export type ModuleState = {
-  /** `true` after `start()` completes successfully, `false` after `stop()`. */
-  isStarted: boolean;
-};
-
-/** Lifecycle events emitted by a module. */
-export type ModuleEvents = {
-  /** Fired once after `start()` completes successfully. */
-  started: () => void;
-  /** Fired once after `stop()` completes successfully. */
-  stopped: () => void;
-  /** Fired when stat errored. */
-  errorStarting: (error: Error) => void;
-  /** Fired when stop errored. */
-  errorStopping: (error: Error) => void;
-};
+import type { OrUnknown } from '../core/types.js';
+import type { ServiceBase } from '../services/internal/serviceBase.js';
+import type { ActionsOf } from '../services/internal/types.js';
+import type { RemoteService } from '../services/remoteService.js';
+import type { Service } from '../services/service.js';
+import type { ServiceClient } from '../services/serviceClient.js';
+import type { ServiceDescriptor } from '../services/types.js';
 
 /**
  * Describes the shape of a module — a map of names to `Service` instances.
@@ -26,31 +13,24 @@ export type ModuleEvents = {
  * type App = {
  *   server: Service<IServer>;
  *   db: Service<IDb>;
+ *   db: RemoteService<IDb>;
  * };
  */
-export type ModuleDescriptor = {
-  [key: string]: RawService<any, any>;
+export type ModuleDescriptor = Record<string, Service<any> | RemoteService<any>>;
+
+export type ModuleServices<M extends ModuleDescriptor> = {
+  [K in keyof M]: M[K] extends Service<infer D extends ServiceDescriptor<any>, any>
+    ? // for local service - enforce implementing the actions directly
+      M[K] & OrUnknown<ActionsOf<D>>
+    : // for remote service - no enforcement
+      M[K];
 };
 
-/** The typed `ServiceClient` map exposed on `module.services`.\
- * can accept either a ModuleDescriptor or a (typeof(myModule))\
- * and convert it to : `{ [name] : ServiceClient<descriptor> }`\
- * this is the type of the `myModule.services` fields
- */
-export type ModuleServiceClients<M extends ModuleDescriptor> = {
-  [K in keyof M]: ServiceToClient<M[K]>;
+export type ModuleClients<M extends ModuleDescriptor> = {
+  [K in keyof M]: M[K] extends ServiceBase<ServiceDescriptor<any>, infer P>
+    ? ServiceClient<P>
+    : never;
 };
-
-/** converts :
- * - `Service<D>` => `ServiceClient<D>`
- * - `RemoteService<D>` => `RemoteServiceClient<D>`
- * */
-export type ServiceToClient<S extends RawService<any, any>> =
-  S extends RawService<infer D, infer SP> ? ServiceClient<D, SP> : never;
-
-/** Extracts the `ServiceDescriptor` from a `Service`. */
-export type ExtractDescriptor<S extends RawService<any, any>> =
-  S extends RawService<infer D, any> ? D : never;
 
 //-------------------------------------------------------
 //-------------------------------------------------------

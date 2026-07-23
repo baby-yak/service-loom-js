@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createModule } from '../modules/moduleFactory.js';
-import { Service } from '../services/service.js';
+import { IService } from '../services/iService.js';
 import { createService } from '../services/serviceFactory.js';
 
 // ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ type IStateless = {
   actions: { ping(): string };
 };
 
-class CounterService extends Service<ICounter> {
+class CounterService extends IService<ICounter> {
   constructor() {
     super({ count: 0 }, { name: 'counter' });
     this.actions.setHandler(this);
@@ -38,7 +38,7 @@ class CounterService extends Service<ICounter> {
   }
 }
 
-class StatelessService extends Service<IStateless> {
+class StatelessService extends IService<IStateless> {
   constructor() {
     super(undefined);
     this.actions.setHandler('ping', () => 'pong');
@@ -325,7 +325,7 @@ describe('createService()', () => {
 
   describe('getModule', () => {
     it('throws before onServiceStart', () => {
-      class S extends Service<ICounter> {
+      class S extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 's' });
         }
@@ -341,7 +341,7 @@ describe('createService()', () => {
 
     it('returns module client from onServiceStart onward', async () => {
       let mod: unknown;
-      class S extends Service<ICounter> {
+      class S extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'counter' });
         }
@@ -357,14 +357,14 @@ describe('createService()', () => {
     });
 
     it('returned client has access to sibling services', async () => {
-      type AppModule = { a: Service<ICounter>; b: Service<ICounter> };
+      type AppModule = { a: IService<ICounter>; b: IService<ICounter> };
       let siblingState: unknown;
-      class A extends Service<ICounter> {
+      class A extends IService<ICounter> {
         constructor() {
           super({ count: 42 }, { name: 'counter' });
         }
       }
-      class B extends Service<ICounter> {
+      class B extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'counter' });
         }
@@ -380,7 +380,7 @@ describe('createService()', () => {
 
     it('module client is the same instance as module.client', async () => {
       let mod: unknown;
-      class S extends Service<ICounter> {
+      class S extends IService<ICounter> {
         constructor() {
           super({ count: 0 });
         }
@@ -404,7 +404,7 @@ describe('createService()', () => {
     it('works alongside OOP services in the same Module', async () => {
       const calls: string[] = [];
 
-      class OopCounter extends Service<ICounter> {
+      class OopCounter extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'oop' });
         }
@@ -424,7 +424,7 @@ describe('createService()', () => {
         calls.push('composed:start');
       };
 
-      const app = createModule<{ oop: Service<ICounter>; composed: Service<ICounter> }>({
+      const app = createModule<{ oop: IService<ICounter>; composed: IService<ICounter> }>({
         oop: new OopCounter(),
         composed,
       });

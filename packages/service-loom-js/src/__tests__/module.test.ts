@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createModule } from '../modules/moduleFactory.js';
-import { Service } from '../services/service.js';
+import { IService } from '../services/iService.js';
 
 // ---------------------------------------------------------------------------
 // Shared test services
@@ -16,7 +16,7 @@ type ILogger = {
   actions: { log(msg: string): void };
 };
 
-class CounterService extends Service<ICounter> {
+class CounterService extends IService<ICounter> {
   constructor() {
     super({ count: 0 }, { name: 'counter' });
     this.actions.setHandler(this);
@@ -29,7 +29,7 @@ class CounterService extends Service<ICounter> {
   }
 }
 
-class LoggerService extends Service<ILogger> {
+class LoggerService extends IService<ILogger> {
   readonly log = vi.fn();
   constructor() {
     super(undefined, { name: 'logger' });
@@ -48,7 +48,7 @@ describe('Module', () => {
   //-- construction
   //-------------------------------------------------------
   type ModuleDescriptor = {
-    counter: Service<ICounter>;
+    counter: IService<ICounter>;
   };
 
   describe('construction', () => {
@@ -67,7 +67,7 @@ describe('Module', () => {
     });
 
     it('clients receive events emitted by the service', () => {
-      const app = createModule<{ counter: Service<ICounter> }>({ counter: new CounterService() });
+      const app = createModule<{ counter: IService<ICounter> }>({ counter: new CounterService() });
       const listener = vi.fn();
       app.services.counter.events.on('changed', listener);
       app.services.counter.actions.invoke.increment();
@@ -76,8 +76,8 @@ describe('Module', () => {
 
     it('accepts multiple services', () => {
       const app = createModule<{
-        counter: Service<ICounter>;
-        logger: Service<ILogger>;
+        counter: IService<ICounter>;
+        logger: IService<ILogger>;
       }>({
         counter: new CounterService(),
         logger: new LoggerService(),
@@ -95,7 +95,7 @@ describe('Module', () => {
     it('calls onServiceInit → onServiceStart → onServiceAfterStart in order', async () => {
       const calls: string[] = [];
 
-      class OrderedService extends Service<ICounter> {
+      class OrderedService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'ordered' });
         }
@@ -120,7 +120,7 @@ describe('Module', () => {
     it('completes all services in one phase before moving to the next', async () => {
       const calls: string[] = [];
 
-      class PhaseService extends Service<ICounter> {
+      class PhaseService extends IService<ICounter> {
         constructor(private id: string) {
           super({ count: 0 }, { name: id });
         }
@@ -132,7 +132,7 @@ describe('Module', () => {
         }
       }
 
-      const app = createModule<{ a: Service<ICounter>; b: Service<ICounter> }>({
+      const app = createModule<{ a: IService<ICounter>; b: IService<ICounter> }>({
         a: new PhaseService('a'),
         b: new PhaseService('b'),
       });
@@ -145,7 +145,7 @@ describe('Module', () => {
     it('awaits async lifecycle methods', async () => {
       const calls: string[] = [];
 
-      class AsyncService extends Service<ICounter> {
+      class AsyncService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'async' });
         }
@@ -174,7 +174,7 @@ describe('Module', () => {
     it('calls onServiceBeforeStop → onServiceStop in order', async () => {
       const calls: string[] = [];
 
-      class StopService extends Service<ICounter> {
+      class StopService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'stop' });
         }
@@ -198,7 +198,7 @@ describe('Module', () => {
     it('completes all services in beforeStop before any service runs stop', async () => {
       const calls: string[] = [];
 
-      class StopPhaseService extends Service<ICounter> {
+      class StopPhaseService extends IService<ICounter> {
         constructor(private id: string) {
           super({ count: 0 }, { name: id });
         }
@@ -211,8 +211,8 @@ describe('Module', () => {
       }
 
       const app = createModule<{
-        a: Service<ICounter>;
-        b: Service<ICounter>;
+        a: IService<ICounter>;
+        b: IService<ICounter>;
       }>({
         a: new StopPhaseService('a'),
         b: new StopPhaseService('b'),
@@ -293,7 +293,7 @@ describe('Module', () => {
     it('"started" fires after all services have completed afterStart', async () => {
       const calls: string[] = [];
 
-      class TrackedService extends Service<ICounter> {
+      class TrackedService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'tracked' });
         }
@@ -324,7 +324,7 @@ describe('Module', () => {
     it('emits "errorStarting" and default-logs when a service throws during start', async () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      class BrokenService extends Service<ICounter> {
+      class BrokenService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'broken' });
         }
@@ -349,7 +349,7 @@ describe('Module', () => {
     it('does not use the default error log when a listener is registered for errorStarting', async () => {
       const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      class BrokenService extends Service<ICounter> {
+      class BrokenService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'broken' });
         }
@@ -408,7 +408,7 @@ describe('Module', () => {
     });
 
     it('waitForStart() rejects if a service throws during start', async () => {
-      class BrokenService extends Service<ICounter> {
+      class BrokenService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'broken' });
         }
@@ -478,7 +478,7 @@ describe('Module', () => {
     it('double start() is a no-op — lifecycle runs only once', async () => {
       const calls: string[] = [];
 
-      class TrackedService extends Service<ICounter> {
+      class TrackedService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'tracked' });
         }
@@ -497,7 +497,7 @@ describe('Module', () => {
     it('double stop() is a no-op', async () => {
       const calls: string[] = [];
 
-      class TrackedService extends Service<ICounter> {
+      class TrackedService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'tracked' });
         }
@@ -518,7 +518,7 @@ describe('Module', () => {
     it('stop() called concurrently with start() waits for start to finish first', async () => {
       const calls: string[] = [];
 
-      class SlowService extends Service<ICounter> {
+      class SlowService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'slow' });
         }
@@ -549,7 +549,7 @@ describe('Module', () => {
     it('logs each lifecycle phase when verbose is true', async () => {
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      class SimpleService extends Service<ICounter> {
+      class SimpleService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'simple' });
         }
@@ -566,7 +566,7 @@ describe('Module', () => {
     it('does not log when verbose is false', async () => {
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-      class SimpleService extends Service<ICounter> {
+      class SimpleService extends IService<ICounter> {
         constructor() {
           super({ count: 0 }, { name: 'simple' });
         }

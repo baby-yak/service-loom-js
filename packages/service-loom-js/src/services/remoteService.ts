@@ -1,17 +1,12 @@
 import { ActionExecuter } from '../actions/actionExecuter.js';
-import { _BRAND_SERVICE_, _DEPENDENCIES_ } from '../core/symbols.js';
-import type { Empty } from '../core/types.js';
+import { _BRAND_REMOTE_SERVICE_ } from '../core/symbols.js';
 import { EventEmitter } from '../events/eventEmitter.js';
-import type { ModuleClients, ModuleDescriptor } from '../modules/types.js';
 import { ReactiveState } from '../reactiveState/reactiveState.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import type { ActionsOf, EventsOf, StateArgs, StateOf } from './internal/types.js';
 import type { ServiceDescriptor } from './types.js';
 
-export abstract class Service<
-  Descriptor extends ServiceDescriptor<any>,
-  Deps extends ModuleDescriptor = Empty,
-> extends ServiceBase<
+export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> extends ServiceBase<
   Descriptor,
   {
     // uniform actualization: each provider coerces its own opted-out (undefined)
@@ -21,9 +16,7 @@ export abstract class Service<
     events: EventEmitter<EventsOf<Descriptor>>;
   }
 > {
-  readonly [_BRAND_SERVICE_] = true;
-
-  [_DEPENDENCIES_]: ModuleClients<Deps> | undefined;
+  readonly [_BRAND_REMOTE_SERVICE_] = true;
 
   constructor(...args: StateArgs<StateOf<Descriptor>>) {
     const initialState = args[0] as StateOf<Descriptor>;
@@ -32,16 +25,5 @@ export abstract class Service<
     super(actions, new ReactiveState(initialState), new EventEmitter());
 
     actions.setHandler(this as any as ActionsOf<Descriptor>);
-  }
-
-  protected getModule(): ModuleClients<Deps> {
-    const deps = this[_DEPENDENCIES_];
-    if (deps == null) {
-      throw new Error(
-        `[${this.name}]:getModule() - dependencies are not available.` +
-          `They are only available from onServiceStart() and until onServiceBeforeStop()`,
-      );
-    }
-    return deps;
   }
 }

@@ -1,9 +1,10 @@
 import type { UnsubscribeFn } from '../core/types.js';
 import type { RawStateClient } from '../state/rawStateClient.js';
+import type { StateMap } from '../state/types.js';
 import type { StateListener, StateSelectFn } from './types.js';
 
 /** Read-only view of a reactive state container. */
-export interface ReactiveStateClient<S> extends RawStateClient<S> {
+export interface ReactiveStateClient<S extends StateMap> extends RawStateClient<S> {
   /** Returns the current state (deeply readonly). */
   get<U = S>(select?: StateSelectFn<S, U>): U;
 

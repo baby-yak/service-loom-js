@@ -1,3 +1,6 @@
+service-loom-js OLD/
+
+
 node_modules/
 dist/
 coverage/

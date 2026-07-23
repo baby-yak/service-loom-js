@@ -1,8 +1,4 @@
-import type { EMPTY } from '../core/types.js';
-import type { EventClient } from '../events/index.js';
-import type { ReactiveStateClient } from '../reactiveState/index.js';
-import type { ModuleClient } from './moduleClient.js';
-import type { ModuleDescriptor, ModuleEvents, ModuleServiceClients, ModuleState } from './types.js';
+import type { ModuleClients, ModuleDescriptor } from './types.js';
 
 /**
  * Orchestrates a set of services through a shared lifecycle.
@@ -28,24 +24,16 @@ import type { ModuleDescriptor, ModuleEvents, ModuleServiceClients, ModuleState 
  *   db: new DbService(),
  * });
  *
- * app.start();
+ * await app.start();
  * app.services.server.actions.invoke.connect(8080);
- * app.stop();
+ * await app.stop();
  */
-export interface Module<M extends ModuleDescriptor = EMPTY> {
+export type Module<M extends ModuleDescriptor> = {
   readonly name: string;
-  readonly state: ReactiveStateClient<ModuleState>;
-  readonly events: EventClient<ModuleEvents>;
-  readonly services: ModuleServiceClients<M>;
+  readonly services: ModuleClients<M>;
 
-  /** Returns a read-only `ModuleClient` safe to share with consumers. Does not expose `start`/`stop`. */
-  readonly client: ModuleClient<M>;
   /** Run the full startup sequence: `init` → `start` → `afterStart`. */
-  start(): void;
+  start(): Promise<void>;
   /** Run the full shutdown sequence: `beforeStop` → `stop`. */
-  stop(): void;
-  /** resolves on 'started' (or immediately if already started), rejects on 'error' */
-  waitForStart(): Promise<void>;
-  /** resolves on 'stopped' (or immediately if already stopped), rejects on 'error' */
-  waitForStop(): Promise<void>;
-}
+  stop(): Promise<void>;
+};
