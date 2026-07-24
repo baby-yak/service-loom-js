@@ -118,12 +118,12 @@ export const services = app.services;
 
 ```ts
 const server = app.services.server;
-server.actions.invoke.connect(8080);
+server.actions.connect(8080);
 server.events.on('connected', () => console.log('connected!'));
 server.state.subscribe((s) => console.log(s.address));
 
 const db = app.services.db;
-const newItem = await db.actions.invoke.addItem('hat');
+const newItem = await db.actions.addItem('hat');
 ```
 
 [→ Full modules docs](./docs/modules.md)
@@ -190,8 +190,8 @@ actions.setHandler(new MyService());
 // Or register individual handlers (takes priority over the class)
 actions.setHandler('add', (a, b) => a + b + 1);
 
-// Invoke via a typed client — no write access
-const client = actions.client;
+// actions.invoke is the read-only client — no setHandler, share it freely
+const client = actions.invoke;
 client.greet('Alice');
 console.log(client.add(1, 2)); // 4
 ```

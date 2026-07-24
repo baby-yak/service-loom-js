@@ -22,7 +22,7 @@ export const services = app.services;
 Use the services in other app components:
 
 ```ts
-services.server.actions.invoke.connect(8080);
+services.server.actions.connect(8080);
 services.server.events.on('connected', () => console.log('online'));
 services.db.state.subscribe((s) => console.log(s));
 ```
@@ -78,7 +78,7 @@ After construction, `module.services` holds a typed `ServiceClient` for each ser
 ```ts
 app.services.server.state.get();
 app.services.server.events.on('connected', handler);
-app.services.server.actions.invoke.connect(8080);
+app.services.server.actions.connect(8080);
 ```
 
 **Typing `module.services`** — use `ModuleClients` to extract the type:

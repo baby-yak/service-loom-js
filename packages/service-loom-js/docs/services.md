@@ -141,7 +141,7 @@ this.actions.setHandler('connect', (port) => { /* override */ });
 To invoke an action from within the service:
 
 ```ts
-this.actions.invoke.connect(8080);
+this.invoke.connect(8080);
 ```
 
 [→ Full actions docs](./actions.md)
@@ -156,7 +156,7 @@ const client = service.client;
 client.state.get();                            // read state
 client.state.subscribe((s) => { ... });        // reactive subscription
 client.events.on('connected', () => { });      // listen to events
-client.actions.invoke.connect(8080);           // invoke actions
+client.actions.connect(8080);                  // invoke actions
 ```
 
 ---
