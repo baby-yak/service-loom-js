@@ -1,6 +1,7 @@
 import { enableMapSet, produce, type Draft } from 'immer';
+import type { StateProvider } from '../core/providerTypes.js';
 import type { UnsubscribeFn } from '../core/types.js';
-import type { RawStateProvider, StateMap } from '../state/index.js';
+import type { StateMap } from '../state/index.js';
 import { StateClient_imp } from './internal/stateClient_imp.js';
 import { StateSelector_imp } from './internal/stateSelector_imp.js';
 import { isPlainObject } from './internal/utils.js';
@@ -47,7 +48,7 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
  * state.update(draft => { draft.count++; });
  * ```
  */
-export class ReactiveState<S extends StateMap> implements RawStateProvider<S> {
+export class ReactiveState<S extends StateMap> implements StateProvider<ReactiveStateClient<S>> {
   //instance marker
 
   private _initial: S;

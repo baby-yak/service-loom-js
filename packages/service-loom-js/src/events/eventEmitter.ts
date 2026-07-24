@@ -1,3 +1,4 @@
+import type { EventsProvider } from '../core/providerTypes.js';
 import type { EventClient } from './eventClient.js';
 import { EventClient_imp } from './internal/eventClient_imp.js';
 import {
@@ -54,7 +55,7 @@ type Listener<T_EventMap extends EventMap> = {
  */
 export class EventEmitter<T_EventMap extends EventMap>
   extends EventClient_imp<T_EventMap>
-  implements EventClient<T_EventMap>
+  implements EventClient<T_EventMap>, EventsProvider<EventClient<T_EventMap>>
 {
   //instance marker
 

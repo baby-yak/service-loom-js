@@ -44,17 +44,6 @@ export type AsPromise<T> = T extends (...args: infer Args) => any
   ? (...args: Args) => Promise<Awaited<ReturnType<T>>>
   : never;
 
-//-------------------------------------------------------
-//-- Providers
-//-------------------------------------------------------
-
-/** general purpose provider with a typed client  */
-export interface Provider<Client = any> {
-  readonly client: Client;
-}
-
-/** extract client type from Provider<C>  */
-export type ClientOf<T extends Provider> = T extends Provider<infer C> ? C : never;
-
 /** simplify a compound type */
 export type Simplify<T> = T extends any ? { [K in keyof T]: T[K] } : never;
+

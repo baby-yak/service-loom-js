@@ -6,19 +6,21 @@ import {
   _SHAPE_,
   _STATE_,
 } from '../../core/symbols.js';
-import type { ClientOf, Provider } from '../../core/types.js';
 import type { ServiceClient } from '../serviceClient.js';
 import type { ServiceDescriptor } from '../types.js';
 import type {
+  ActionsClientOf,
   ActionsProviderOf,
+  EventsClientOf,
   EventsProviderOf,
   ServiceProvidersShape,
+  StateClientOf,
   StateProviderOf,
 } from './types.js';
 
 export abstract class ServiceBase<
   Descriptor extends ServiceDescriptor<any>,
-  Providers extends ServiceProvidersShape<Provider, Provider, Provider>,
+  Providers extends ServiceProvidersShape<any, any, any>,
 > {
   // brand
   readonly [_BRAND_SERVICE_BASE_] = true;
@@ -37,8 +39,8 @@ export abstract class ServiceBase<
   readonly state: StateProviderOf<Providers>;
   readonly events: EventsProviderOf<Providers>;
 
-  /** shorthand for `.action.client` witch is also `.action.invoke`  */
-  readonly invoke: ClientOf<ActionsProviderOf<Providers>>;
+  /** shorthand for `this.actions.invoke` . i.e this.actions.invoke.foo() === this.invoke.foo()  */
+  readonly invoke: ActionsClientOf<Providers>;
 
   readonly client: ServiceClient<Providers>;
 
@@ -49,20 +51,18 @@ export abstract class ServiceBase<
     events: EventsProviderOf<Providers>,
   ) {
     this.name = name;
-
+    
     this.actions = actions;
     this.state = state;
     this.events = events;
 
-    this.invoke = this.actions.client as ClientOf<ActionsProviderOf<Providers>>;
+    this.invoke = this.actions.invoke as ActionsClientOf<Providers>;
 
     this.client = {
       name: this.name,
-      actions: this.actions.client as ClientOf<ActionsProviderOf<Providers>>,
-      state: this.state.client as ClientOf<StateProviderOf<Providers>>,
-      events: this.events.client as ClientOf<EventsProviderOf<Providers>>,
-
-      invoke: this.actions.client as ClientOf<ActionsProviderOf<Providers>>,
+      actions: this.actions.invoke as ActionsClientOf<Providers>,
+      state: this.state.client as StateClientOf<Providers>,
+      events: this.events.client as EventsClientOf<Providers>,
     };
   }
 

@@ -204,15 +204,15 @@ describe('Service', () => {
       expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    it('client.actions.invoke dispatches to service handler', () => {
+    it('client.actions dispatches to service handler', () => {
       const s = new CounterService();
-      s.client.actions.invoke.increment();
+      s.client.actions.increment();
       expect(s.state.get().count).toBe(1);
     });
 
-    it('client.actions.invoke return values are preserved', () => {
+    it('client.actions return values are preserved', () => {
       const s = new CounterService();
-      expect(s.client.actions.invoke.add(5)).toBe(5);
+      expect(s.client.actions.add(5)).toBe(5);
     });
 
     it('client.state.get() is undefined for no-state service', () => {

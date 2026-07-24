@@ -68,7 +68,7 @@ describe('Module', () => {
 
     it('actions are functional through the client', () => {
       const app = createModule({ counter: new CounterService() });
-      app.services.counter.actions.invoke.increment();
+      app.services.counter.actions.increment();
       expect(app.services.counter.state.get().count).toBe(1);
     });
 
@@ -76,7 +76,7 @@ describe('Module', () => {
       const app = createModule<AppShape>({ counter: new CounterService() });
       const listener = vi.fn();
       app.services.counter.events.on('changed', listener);
-      app.services.counter.actions.invoke.increment();
+      app.services.counter.actions.increment();
       expect(listener).toHaveBeenCalledTimes(1);
     });
 

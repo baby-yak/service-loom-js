@@ -1,20 +1,14 @@
-import type { ClientOf, Provider } from '../core/types.js';
 import type {
-  ActionsProviderOf,
-  EventsProviderOf,
+  ActionsClientOf,
+  EventsClientOf,
   ServiceProvidersShape,
-  StateProviderOf,
+  StateClientOf,
 } from './internal/types.js';
 
-export interface ServiceClient<
-  Providers extends ServiceProvidersShape<Provider, Provider, Provider>,
-> {
+export interface ServiceClient<Providers extends ServiceProvidersShape<any, any, any>> {
   readonly name: string | undefined;
 
-  readonly actions: ClientOf<ActionsProviderOf<Providers>>;
-  readonly state: ClientOf<StateProviderOf<Providers>>;
-  readonly events: ClientOf<EventsProviderOf<Providers>>;
-
-  /** same as actions. nicer terminology */
-  readonly invoke: ClientOf<ActionsProviderOf<Providers>>;
+  readonly actions: ActionsClientOf<Providers>;
+  readonly state: StateClientOf<Providers>;
+  readonly events: EventsClientOf<Providers>;  
 }
