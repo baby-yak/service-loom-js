@@ -1,5 +1,5 @@
 import type { _ACTIONS_, _EVENTS_, _SHAPE_, _STATE_ } from '../core/symbols.js';
-import type { OrUnknown } from '../core/types.js';
+import type { Empty, OrUnknown } from '../core/types.js';
 import type { ServiceShape } from './internal/types.js';
 
 //-------------------------------------------------------
@@ -10,7 +10,7 @@ import type { ServiceShape } from './internal/types.js';
 // the `extends undefined ? unknown` guard stops `& Actions` from collapsing to
 // `never` when actions are opted out (`unknown` is the identity for `&`).
 
-export type ServiceDescriptor<Shape extends ServiceShape> =
+export type ServiceDescriptor<Shape extends ServiceShape = Empty> =
   //
   OrUnknown<Shape['actions']> & {
     [_SHAPE_]?: Shape | undefined;

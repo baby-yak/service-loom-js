@@ -1,7 +1,6 @@
-import type { IsAny } from 'expect-type';
 import type { ActionMap } from '../../actions/types.js';
 import type { _DESCRIPTOR_, _SHAPE_ } from '../../core/symbols.js';
-import type { Empty, Provider } from '../../core/types.js';
+import type { Empty, IsAny, Provider } from '../../core/types.js';
 import type { EventMap } from '../../events/types.js';
 import type { StateMap } from '../../state/types.js';
 import type { ServiceDescriptor } from '../types.js';

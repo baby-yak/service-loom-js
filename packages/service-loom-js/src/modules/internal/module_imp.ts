@@ -110,11 +110,7 @@ export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
     allowDependencies: boolean,
     fn: (s: ServiceBase<ServiceDescriptor<any>, any>) => void | Promise<void>,
   ): Promise<void> {
-    console.log(`[module] running ${title} ...`);
     const all = this._servicesImplementors;
-    // if (all == null) {
-    //   return;
-    // }
 
     await Promise.all(
       Object.entries(all).map(async ([key, svc]) => {
@@ -129,7 +125,7 @@ export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
         await fn(svc);
 
         const paddedName = name.padEnd(this._longestServiceName);
-        console.log(` ✅ [${paddedName}]`);
+        this._debugLogger.log(` ✅ [${paddedName}] - ${title}`);
       }),
     );
   }
