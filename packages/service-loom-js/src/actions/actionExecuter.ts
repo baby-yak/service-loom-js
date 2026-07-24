@@ -1,4 +1,4 @@
-import type { ActionsProvider } from '../core/providerTypes.js';
+import type { ActionsProvider } from '../core/internal/providerTypes.js';
 import type { ActionClient } from './actionClient.js';
 import { ActionExecutionMapping } from './internal/types.js';
 import { createInvoker } from './internal/utils.js';

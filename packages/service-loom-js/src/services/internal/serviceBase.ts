@@ -5,22 +5,20 @@ import {
   _EVENTS_,
   _SHAPE_,
   _STATE_,
-} from '../../core/symbols.js';
-import type { ServiceClient } from '../serviceClient.js';
+} from '../../core/internal/symbols.js';
 import type { ServiceDescriptor } from '../types.js';
+import type { ServiceClientBase } from './serviceClientBase.js';
 import type {
-  ActionsClientOf,
   ActionsProviderOf,
-  EventsClientOf,
   EventsProviderOf,
   ServiceProvidersShape,
-  StateClientOf,
   StateProviderOf,
 } from './types.js';
 
-export abstract class ServiceBase<
+export abstract class   ServiceBase<
   Descriptor extends ServiceDescriptor<any>,
   Providers extends ServiceProvidersShape<any, any, any>,
+  Client extends ServiceClientBase<Providers>,
 > {
   // brand
   readonly [_BRAND_SERVICE_BASE_] = true;
@@ -39,31 +37,22 @@ export abstract class ServiceBase<
   readonly state: StateProviderOf<Providers>;
   readonly events: EventsProviderOf<Providers>;
 
-  /** shorthand for `this.actions.invoke` . i.e this.actions.invoke.foo() === this.invoke.foo()  */
-  readonly invoke: ActionsClientOf<Providers>;
-
-  readonly client: ServiceClient<Providers>;
+  readonly client: Client;
 
   constructor(
     name: string | undefined,
     actions: ActionsProviderOf<Providers>,
     state: StateProviderOf<Providers>,
     events: EventsProviderOf<Providers>,
+    client: Client,
   ) {
     this.name = name;
-    
+
     this.actions = actions;
     this.state = state;
     this.events = events;
 
-    this.invoke = this.actions.invoke as ActionsClientOf<Providers>;
-
-    this.client = {
-      name: this.name,
-      actions: this.actions.invoke as ActionsClientOf<Providers>,
-      state: this.state.client as StateClientOf<Providers>,
-      events: this.events.client as EventsClientOf<Providers>,
-    };
+    this.client = client;
   }
 
   //-------------------------------------------------------

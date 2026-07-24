@@ -1,11 +1,17 @@
 import type { ActionMap } from '../../actions/types.js';
-import type { ActionsProvider, EventsProvider, StateProvider } from '../../core/providerTypes.js';
-import type { _DESCRIPTOR_, _SHAPE_ } from '../../core/symbols.js';
-import type { Empty, IsAny } from '../../core/types.js';
+import type {
+  ActionsProvider,
+  EventsProvider,
+  StateProvider,
+} from '../../core/internal/providerTypes.js';
+import type { _DESCRIPTOR_, _SHAPE_ } from '../../core/internal/symbols.js';
+import type { IsAny } from '../../core/internal/types.js';
+import type { Empty } from '../../core/types.js';
 import type { EventMap } from '../../events/types.js';
 import type { StateMap } from '../../state/types.js';
-import type { ServiceDescriptor } from '../types.js';
-import type { ServiceBase } from './serviceBase.js';
+import type { RemoteService, RemoteServiceClient } from '../remoteService.js';
+import type { Service, ServiceClient } from '../service.js';
+import type { AnyService, ServiceDescriptor } from '../types.js';
 
 export type ServiceShape = {
   actions?: ActionMap;
@@ -27,9 +33,15 @@ export type ServiceProvidersShape<
 //-- util types
 //-------------------------------------------------------
 
-// recover a service's Descriptor from the ServiceBase brand (directly inferable)
-export type DescriptorOf<T extends ServiceBase<any, any>> = NonNullable<T[typeof _DESCRIPTOR_]>;
+export type DescriptorOf<T extends AnyService> = NonNullable<T[typeof _DESCRIPTOR_]>;
 export type ShapeOf<T extends ServiceDescriptor<any>> = T[typeof _SHAPE_];
+
+export type ClientOfService<T extends AnyService> =
+  T extends Service<infer D extends ServiceDescriptor<any>, any>
+    ? ServiceClient<D>
+    : T extends RemoteService<infer D extends ServiceDescriptor<any>>
+      ? RemoteServiceClient<D>
+      : never;
 
 //-------------------------------------------------------
 //-- descriptor parts:

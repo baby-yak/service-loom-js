@@ -1,7 +1,6 @@
-import { _DEPENDENCIES_ } from '../../core/symbols.js';
-import type { ServiceBase } from '../../services/internal/serviceBase.js';
-import type { ServiceDescriptor } from '../../services/types.js';
+import { _DEPENDENCIES_ } from '../../core/internal/symbols.js';
 import { Service } from '../../services/service.js';
+import type { AnyService } from '../../services/types.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 import { AsyncMutex } from '../../utils/mutex.js';
 import type { Module } from '../module.js';
@@ -108,7 +107,7 @@ export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
   private async runPhase(
     title: string,
     allowDependencies: boolean,
-    fn: (s: ServiceBase<ServiceDescriptor<any>, any>) => void | Promise<void>,
+    fn: (s: AnyService) => void | Promise<void>,
   ): Promise<void> {
     const all = this._servicesImplementors;
 

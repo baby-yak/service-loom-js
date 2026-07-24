@@ -1,4 +1,4 @@
-import type { EventsProvider } from '../core/providerTypes.js';
+import type { EventsProvider } from '../core/internal/providerTypes.js';
 import type { EventClient } from './eventClient.js';
 import { EventClient_imp } from './internal/eventClient_imp.js';
 import {

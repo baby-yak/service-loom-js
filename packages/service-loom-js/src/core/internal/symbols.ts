@@ -10,3 +10,7 @@ export const _DEPENDENCIES_: unique symbol = Symbol('_DEPENDENCIES_');
 export const _BRAND_SERVICE_BASE_: unique symbol = Symbol('_SERVICE_BASE_');
 export const _BRAND_SERVICE_: unique symbol = Symbol('_SERVICE_');
 export const _BRAND_REMOTE_SERVICE_: unique symbol = Symbol('_REMOTE_SERVICE_');
+
+export const _BRAND_SERVICE_CLIENT_BASE_: unique symbol = Symbol('_BRAND_SERVICE_CLIENT_BASE_');
+export const _BRAND_SERVICE_CLIENT_: unique symbol = Symbol('_BRAND_SERVICE_CLIENT_');
+export const _BRAND_REMOTE_SERVICE_CLIENT: unique symbol = Symbol('_BRAND_REMOTE_SERVICE_CLIENT');

@@ -1,5 +1,5 @@
 import { enableMapSet, produce, type Draft } from 'immer';
-import type { StateProvider } from '../core/providerTypes.js';
+import type { StateProvider } from '../core/internal/providerTypes.js';
 import type { UnsubscribeFn } from '../core/types.js';
 import type { StateMap } from '../state/index.js';
 import { StateClient_imp } from './internal/stateClient_imp.js';
