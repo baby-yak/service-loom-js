@@ -1,4 +1,4 @@
-import type { OrUnknown } from '../core/types.js';
+import type { OrUnknown, Simplify } from '../core/types.js';
 import type { ServiceBase } from '../services/internal/serviceBase.js';
 import type { ActionsOf } from '../services/internal/types.js';
 import type { RemoteService } from '../services/remoteService.js';
@@ -26,11 +26,11 @@ export type ModuleServices<M extends ModuleDescriptor> = {
       M[K];
 };
 
-export type ModuleClients<M extends ModuleDescriptor> = {
+export type ModuleClients<M extends ModuleDescriptor> = Simplify<{
   [K in keyof M]: M[K] extends ServiceBase<ServiceDescriptor<any>, infer P>
     ? ServiceClient<P>
     : never;
-};
+}>;
 
 //-------------------------------------------------------
 //-------------------------------------------------------

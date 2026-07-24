@@ -55,3 +55,6 @@ export interface Provider<Client = any> {
 
 /** extract client type from Provider<C>  */
 export type ClientOf<T extends Provider> = T extends Provider<infer C> ? C : never;
+
+/** simplify a compound type */
+export type Simplify<T> = T extends any ? { [K in keyof T]: T[K] } : never;
