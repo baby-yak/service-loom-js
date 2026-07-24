@@ -1,5 +1,3 @@
-import type { ActionClient } from './actionClient.js';
-import { ActionsClient_imp } from './internal/actionsClient_imp.js';
 import { ActionExecutionMapping } from './internal/types.js';
 import { createInvoker } from './internal/utils.js';
 import type {
@@ -13,20 +11,23 @@ import type {
 //export type ActionsConstructionParams = {};
 export type ActionExecuterParams = object;
 
-export class ActionExecuter<T_Map extends ActionMap> implements ActionClient<T_Map> {
-  /**
-   * invoke actions with this
+export class ActionExecuter<T_Map extends ActionMap> {
+  private _exec = new ActionExecutionMapping<T_Map>();
+
+  readonly client: Invoker<T_Map>;
+
+  /** same as this.client
+   * .client - adhere to provider interface  (provider.client)
+   * .invoke - nicer terminology. same object internally.
+   * this.client.doAction(5) is same as this.invoke.doAction(5)
    */
   readonly invoke: Invoker<T_Map>;
-
-  private _exec = new ActionExecutionMapping<T_Map>();
-  readonly client: ActionClient<T_Map>;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(_params?: ActionExecuterParams) {
     //create the invoker
-    this.invoke = createInvoker(this._exec);
-    this.client = new ActionsClient_imp(this.invoke);
+    this.client = createInvoker(this._exec);
+    this.invoke = this.client;
   }
 
   //-------------------------------------------------------

@@ -14,4 +14,7 @@ export interface ServiceClient<
   readonly actions: ClientOf<ActionsProviderOf<Providers>>;
   readonly state: ClientOf<StateProviderOf<Providers>>;
   readonly events: ClientOf<EventsProviderOf<Providers>>;
+
+  /** same as actions. nicer terminology */
+  readonly invoke: ClientOf<ActionsProviderOf<Providers>>;
 }

@@ -37,6 +37,9 @@ export abstract class ServiceBase<
   readonly state: StateProviderOf<Providers>;
   readonly events: EventsProviderOf<Providers>;
 
+  /** shorthand for `.action.client` witch is also `.action.invoke`  */
+  readonly invoke: ClientOf<ActionsProviderOf<Providers>>;
+
   readonly client: ServiceClient<Providers>;
 
   constructor(
@@ -51,11 +54,15 @@ export abstract class ServiceBase<
     this.state = state;
     this.events = events;
 
+    this.invoke = this.actions.client as ClientOf<ActionsProviderOf<Providers>>;
+
     this.client = {
       name: this.name,
       actions: this.actions.client as ClientOf<ActionsProviderOf<Providers>>,
       state: this.state.client as ClientOf<StateProviderOf<Providers>>,
       events: this.events.client as ClientOf<EventsProviderOf<Providers>>,
+
+      invoke: this.actions.client as ClientOf<ActionsProviderOf<Providers>>,
     };
   }
 
