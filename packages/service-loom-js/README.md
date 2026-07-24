@@ -20,45 +20,33 @@ npm install @baby-yak/service-loom-js
 | Events   | Typed event emitter with wildcard, once, and async/await support | [→ docs/events.md](./docs/events.md)     |
 | State    | Reactive state with immer and selector support                   | [→ docs/state.md](./docs/state.md)       |
 | Actions  | Action dispatcher                                                | [→ docs/actions.md](./docs/actions.md)   |
-| Helpers  | Type guards (`isService`, `isStateClient`, …) for all entities  | [→ docs/helpers.md](./docs/helpers.md)   |
+| Helpers  | Type guards (`isService`, `isStateClient`, …) for all entities   | [→ docs/helpers.md](./docs/helpers.md)   |
 
 ## Quick start
 
 ### Services
 
-Services are complete behaviour components.
-They hold state, fire events and have invoked actions.
-First we define the service "shape":
+Define a descriptor type with `ServiceDescriptor<Shape>`, then extend `Service` and implement the action methods directly on the class:
 
 ```ts
-import { Service } from '@baby-yak/service-loom-js';
+import { Service, ServiceDescriptor } from '@baby-yak/service-loom-js';
 
-type IServer = {
+type IServer = ServiceDescriptor<{
   state: { address: string };
   events: { connected: () => void };
   actions: { connect(port: number): void };
-};
-```
+}>;
 
-Now we can create the service - there are two supported styles for that.
-Choose you weapon:
-
-**options 1: OOP — extend `Service` and override methods:**
-
-```ts
-import { Service } from '@baby-yak/service-loom-js';
-
-class ServerService extends Service<IServer> {
+class ServerService extends Service<IServer> implements IServer {
   constructor() {
-    super({ address: '' }, { name: 'server' });
-    this.actions.setHandler(this);
+    super('server', { address: '' });
   }
 
   protected onServiceInit() {
-    /* standalone setup */
+    /* standalone setup — DB connect, config load */
   }
   protected onServiceStart() {
-    /* cross-service wiring */
+    /* cross-service wiring — safe to call other services here */
   }
 
   connect(port: number) {
@@ -69,51 +57,28 @@ class ServerService extends Service<IServer> {
   }
 }
 
-// then later instantiate:
 const server = new ServerService();
 ```
 
-**Options 2: Compositional — `createService()` factory method.**
-(Can assign lifecycle callbacks)
+**Accessing sibling services — `getModule()`:**
+
+Declare the module shape as the second type parameter of `Service`. From `onServiceStart` onward, call `this.getModule()` to access all sibling services:
 
 ```ts
-import { createService } from '@baby-yak/service-loom-js';
-
-const server = createService<IServer>('server', { address: '' });
-
-// life cycle
-server.onInit = async () => {
-  /* standalone setup */
-};
-server.onStart = () => {
-  /* cross-service wiring */
+type App = {
+  server: Service<IServer>;
+  db: Service<IDb>;
 };
 
-// implement service's actions and use state and events:
-server.actions.setHandler('connect', (port) => {
-  server.state.update((s) => {
-    s.address = `host:${port}`;
-  });
-  server.events.emit('connected');
-});
-```
-
-**Accessing sibling services — `getModule<M>()`:**
-
-From `onServiceStart` onward, a service can reach its parent module and read state or invoke actions on siblings:
-
-```ts
-type App = { server: IServer; db: IDb };
-
-class ServerService extends Service<IServer> {
+class ServerService extends Service<IServer, App> {
   protected onServiceStart() {
-    const db = this.getModule<App>().services.db;
+    const db = this.getModule().services.db;
     db.state.subscribe((s) => console.log('db address:', s.address));
   }
 }
 ```
 
-`getModule()` throws if called in the constructor or `onServiceInit` — the module is injected after that phase.
+`getModule()` throws if called before `onServiceStart` — dependencies are only available from that phase onward.
 
 [→ Full services docs](./docs/services.md)
 
@@ -121,12 +86,18 @@ class ServerService extends Service<IServer> {
 
 ### Modules
 
-Collect services into a module. Call `start()` to run the lifecycle and access typed clients via `module.services`.
+Collect services into a module and call `start()` to run the lifecycle. Access typed clients via `module.services`.
 
 ```ts
 import { createModule } from '@baby-yak/service-loom-js';
 
-// Explicit descriptor:
+// Let TypeScript infer the descriptor from the services:
+const app = createModule({
+  server: new ServerService(),
+  db: new DbService(),
+});
+
+// Or provide the descriptor explicitly:
 type App = {
   server: Service<IServer>;
   db: Service<IDb>;
@@ -136,17 +107,10 @@ const app = createModule<App>({
   db: new DbService(),
 });
 
-// Or let TypeScript infer the descriptor from the services:
-const app = createModule({
-  server: new ServerService(),
-  db: new DbService(),
-});
+await app.start();
+// later: await app.stop();
 
-app.start(); // void — fire and forget
-app.stop();  // void — fire and forget
-
-// export the services client facade to the world:
-// the type is { [name] : ServiceClient<descriptor> }
+// export the typed service client map:
 export const services = app.services;
 ```
 
@@ -154,36 +118,12 @@ export const services = app.services;
 
 ```ts
 const server = app.services.server;
-server.actions.connect(8080);
+server.actions.invoke.connect(8080);
 server.events.on('connected', () => console.log('connected!'));
 server.state.subscribe((s) => console.log(s.address));
 
 const db = app.services.db;
-const newItem = await db.actions.addItem('hat');
-```
-
-**Module state and events:**
-you can also react to the module itself
-listen to when the module is started and stopped:
-
-```ts
-app.state.subscribe(({ isStarted }) => console.log('started:', isStarted));
-app.events.on('started', () => console.log('all services ready'));
-app.events.on('stopped', () => console.log('all services stopped'));
-app.events.on('errorStarting', (err) => console.error('start failed:', err));
-```
-
-`waitForStart()` / `waitForStop()` — await completion explicitly (useful in tests, server boot, CLI tools):
-
-```ts
-app.start();
-await app.waitForStart(); // resolves when started, rejects on error
-```
-
-**`module.client`** — read-only facade (`state` + `events` + `services`) without `start`/`stop`:
-
-```ts
-export const moduleClient = app.client;
+const newItem = await db.actions.invoke.addItem('hat');
 ```
 
 [→ Full modules docs](./docs/modules.md)

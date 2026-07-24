@@ -71,7 +71,7 @@ Priority order: **individual handler → execution target → catch-all → thro
 
 ## Read-only client
 
-`actions.client` is an `ActionClient` — exposes an `invoke` proxy identical to `actions.invoke`, but without `setHandler`. Use it to give consumers call access without exposing control.
+`actions.client` is an `ActionClient` — exposes an `invoke` proxy identical to `actions.invoke`, but without `setHandler`. Pass it to consumers who need to call actions but must not configure handlers.
 
 ```ts
 const client = actions.client;
