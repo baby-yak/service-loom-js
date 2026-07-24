@@ -1,4 +1,5 @@
 import type { EventsProvider } from '../core/internal/providerTypes.js';
+import { _BRAND_EVENT_EMITTER } from '../core/internal/symbols.js';
 import type { EventClient } from './eventClient.js';
 import { EventClient_imp } from './internal/eventClient_imp.js';
 import {
@@ -57,7 +58,7 @@ export class EventEmitter<T_EventMap extends EventMap>
   extends EventClient_imp<T_EventMap>
   implements EventClient<T_EventMap>, EventsProvider<EventClient<T_EventMap>>
 {
-  //instance marker
+  readonly [_BRAND_EVENT_EMITTER] = true;
 
   private static _GLOBAL_MAX_LISTENERS = 10;
 

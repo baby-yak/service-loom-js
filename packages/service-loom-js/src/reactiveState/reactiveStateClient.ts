@@ -1,9 +1,12 @@
+import type { _BRAND_REACTIVE_STATE_CLIENT } from '../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../core/types.js';
 import type { StateMap } from '../state/types.js';
 import type { StateListener, StateSelectFn } from './types.js';
 
 /** Read-only view of a reactive state container. */
 export interface ReactiveStateClient<S extends StateMap> {
+  readonly [_BRAND_REACTIVE_STATE_CLIENT]: true;
+
   /** Returns the current state (deeply readonly). */
   get<U = S>(select?: StateSelectFn<S, U>): U;
 

@@ -1,12 +1,16 @@
+import { _BRAND_REACTIVE_STATE_CLIENT } from '../../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../../core/types.js';
+import type { ReactiveState } from '../reactiveState.js';
 import type { ReactiveStateClient } from '../reactiveStateClient.js';
 import type { StateListener, StateSelectFn } from '../types.js';
 
 export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
-  private source: ReactiveStateClient<S>;
+  readonly [_BRAND_REACTIVE_STATE_CLIENT] = true;
+
+  private source: ReactiveState<S>;
   private fn: StateSelectFn<S, U>;
 
-  constructor(source: ReactiveStateClient<S>, fn: StateSelectFn<S, U>) {
+  constructor(source: ReactiveState<S>, fn: StateSelectFn<S, U>) {
     this.source = source;
     this.fn = fn;
   }

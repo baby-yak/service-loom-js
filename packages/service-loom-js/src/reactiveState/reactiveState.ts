@@ -11,6 +11,7 @@ import {
   type StateListenersErrorHandlingType,
   type StateSelectFn,
 } from './types.js';
+import { _BRAND_REACTIVE_STATE } from '../core/internal/symbols.js';
 
 //-------------------------------------------------------
 // -- enables immer Map/Set support globally — see README
@@ -49,7 +50,7 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
  * ```
  */
 export class ReactiveState<S extends StateMap> implements StateProvider<ReactiveStateClient<S>> {
-  //instance marker
+  readonly [_BRAND_REACTIVE_STATE] = true;
 
   private _initial: S;
   private _state: S;

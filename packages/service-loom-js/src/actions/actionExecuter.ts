@@ -1,7 +1,8 @@
 import type { ActionsProvider } from '../core/internal/providerTypes.js';
+import { _BRAND_ACTION_EXECUTER } from '../core/internal/symbols.js';
 import type { ActionClient } from './actionClient.js';
 import { ActionExecutionMapping } from './internal/types.js';
-import { createInvoker } from './internal/utils.js';
+import { createInvoker as createActionsClient } from './internal/utils.js';
 import type {
   ActionHandler,
   ActionMap,
@@ -16,14 +17,16 @@ export type ActionExecuterParams = object;
 export class ActionExecuter<T_Map extends ActionMap> implements ActionsProvider<
   ActionClient<T_Map>
 > {
+  readonly [_BRAND_ACTION_EXECUTER] = true;
+
   private _exec = new ActionExecutionMapping<T_Map>();
 
-  readonly invoke: Invoker<T_Map>;
+  readonly invoke: ActionClient<T_Map>;
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   constructor(_params?: ActionExecuterParams) {
     //create the invoker
-    this.invoke = createInvoker(this._exec);
+    this.invoke = createActionsClient(this._exec);
   }
 
   //-------------------------------------------------------

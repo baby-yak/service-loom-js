@@ -1,3 +1,4 @@
+import { _BRAND_EVENT_EMITTER_CLIENT } from '../../core/internal/symbols.js';
 import type { EventClient } from '../eventClient.js';
 import type {
   EventGroupContext,
@@ -11,6 +12,8 @@ import type { GroupToken } from './types.js';
 let GROUP_COUNT = 0;
 
 export class EventClient_imp<T_EventMap extends EventMap> implements EventClient<T_EventMap> {
+  readonly [_BRAND_EVENT_EMITTER_CLIENT] = true;
+
   // the root will be
   protected readonly root: EventClient_imp<T_EventMap> | undefined;
 

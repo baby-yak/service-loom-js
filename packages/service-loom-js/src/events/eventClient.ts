@@ -1,3 +1,4 @@
+import type { _BRAND_EVENT_EMITTER_CLIENT } from '../core/internal/symbols.js';
 import type {
   EventGroupContext,
   EventListener,
@@ -7,6 +8,7 @@ import type {
 } from './types.js';
 
 export interface EventClient<T_EventMap extends EventMap> {
+  readonly [_BRAND_EVENT_EMITTER_CLIENT]: true;
   /**
    * Adds a listener and returns an unsubscribe function.
    * Calling the returned function removes the listener.

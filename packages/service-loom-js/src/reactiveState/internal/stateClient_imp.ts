@@ -1,11 +1,15 @@
+import { _BRAND_REACTIVE_STATE_CLIENT } from '../../core/internal/symbols.js';
 import type { StateMap } from '../../state/types.js';
+import type { ReactiveState } from '../reactiveState.js';
 import type { ReactiveStateClient } from '../reactiveStateClient.js';
 import type { StateListener, StateSelectFn } from '../types.js';
 
 export class StateClient_imp<S extends StateMap> implements ReactiveStateClient<S> {
-  private source: ReactiveStateClient<S>;
+  readonly [_BRAND_REACTIVE_STATE_CLIENT] = true;
 
-  constructor(source: ReactiveStateClient<S>) {
+  private source: ReactiveState<S>;
+
+  constructor(source: ReactiveState<S>) {
     this.source = source;
   }
 
