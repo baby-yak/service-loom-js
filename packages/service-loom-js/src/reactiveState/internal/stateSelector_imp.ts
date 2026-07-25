@@ -1,16 +1,14 @@
-import { _BRAND_REACTIVE_STATE_CLIENT } from '../../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../../core/types.js';
 import type { ReactiveState } from '../reactiveState.js';
-import type { ReactiveStateClient } from '../reactiveStateClient.js';
+import { ReactiveStateClient } from '../reactiveStateClient.js';
 import type { StateListener, StateSelectFn } from '../types.js';
 
-export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
-  readonly [_BRAND_REACTIVE_STATE_CLIENT] = true;
-
+export class StateSelector_imp<S, U> extends ReactiveStateClient<U> {
   private source: ReactiveState<S>;
   private fn: StateSelectFn<S, U>;
 
   constructor(source: ReactiveState<S>, fn: StateSelectFn<S, U>) {
+    super();
     this.source = source;
     this.fn = fn;
   }
@@ -55,7 +53,7 @@ export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
       prev = selected;
     });
   }
-  select<W>(selector: StateSelectFn<U, W>): ReactiveStateClient<W> {
+  select<W>(selector: StateSelectFn<U, W>) {
     const fn: StateSelectFn<S, W> = (state) => {
       const sub = this.fn(state);
       return selector(sub);

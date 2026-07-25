@@ -1,9 +1,5 @@
 import type { EventMap, EventNames } from '../types.js';
 
-export type GroupToken = {
-  name: string;
-};
-
 export const RESERVED_EVENTS = ['newListener', 'removeListener', '*'] as const;
 
 export type EventMap_Reserved<T_EventMap extends EventMap> = {

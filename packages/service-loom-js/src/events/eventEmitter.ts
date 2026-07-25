@@ -2,12 +2,12 @@ import type { EventsProvider } from '../core/internal/providerTypes.js';
 import { _BRAND_EVENT_EMITTER } from '../core/internal/symbols.js';
 import type { EventClient } from './eventClient.js';
 import { EventClient_imp } from './internal/eventClient_imp.js';
+import { EventSourceBase } from './internal/eventSourceBase.js';
 import {
   type EventNames_Pure,
   type EventNames_Reserved,
   type EventParams_Pure,
   type EventParams_Reserved,
-  type GroupToken,
   isReservedEventName,
 } from './internal/types.js';
 import type {
@@ -32,7 +32,6 @@ export type EventEmitterParams = {
  * container: { listener + metadata}
  */
 type Listener<T_EventMap extends EventMap> = {
-  groupToken: GroupToken;
   listener: EventListener<T_EventMap, EventNames<T_EventMap>>;
   postRemoved?: ((event: EventNames<T_EventMap>) => void) | undefined;
   once: boolean;
@@ -55,8 +54,8 @@ type Listener<T_EventMap extends EventMap> = {
  * ```
  */
 export class EventEmitter<T_EventMap extends EventMap>
-  extends EventClient_imp<T_EventMap>
-  implements EventClient<T_EventMap>, EventsProvider<EventClient<T_EventMap>>
+  extends EventSourceBase<T_EventMap>
+  implements EventsProvider<EventClient<T_EventMap>>
 {
   readonly [_BRAND_EVENT_EMITTER] = true;
 
@@ -66,11 +65,7 @@ export class EventEmitter<T_EventMap extends EventMap>
   private _defaultHandlers: Map<string, EventListener<T_EventMap, EventNames<T_EventMap>>>;
   private _options: Required<EventEmitterParams>;
 
-  /**
-   * Returns a read-only view of this emitter — same listen API, no `emit`.
-   * Use `createListenerGroup()` on the returned client (or on this emitter)
-   * to get a group that can be bulk-removed later.
-   */
+  /** Returns a read-only view of this emitter — same listen API, no `emit`. */
   readonly client: EventClient<T_EventMap>;
 
   /** Default max listeners for all new instances. Set to `0` or `Infinity` to disable. */
@@ -94,10 +89,9 @@ export class EventEmitter<T_EventMap extends EventMap>
 
   //-------------------------------------------------------
   constructor(params?: EventEmitterParams) {
-    // root group , and undefined as source - abstract methods are self implemented (see _addListener and _removeListener)
-    super({ name: 'root' }, undefined);
+    super(undefined);
 
-    this.client = new EventClient_imp({ name: 'client group' }, this);
+    this.client = new EventClient_imp(this);
 
     this._listeners = new Map();
     this._defaultHandlers = new Map();
@@ -229,31 +223,6 @@ export class EventEmitter<T_EventMap extends EventMap>
     return listeners.map((x) => x.listener) as EventListener<T_EventMap, T_Event>[];
   }
 
-  // for internal library use
-  protected override _detachGroup(
-    event: EventNames<T_EventMap> | undefined,
-    groupToken: GroupToken,
-  ): void {
-    if (event != null) {
-      const existing = this._listeners.get(event) ?? [];
-      const fromSource = existing.filter((x) => x.groupToken === groupToken);
-      for (const container of fromSource) {
-        const listener = container.listener;
-
-        this._removeListener({
-          event,
-          listener,
-        });
-      }
-    } else {
-      //resource for all events
-      const events = [...this._listeners.keys()];
-      events.forEach((event) => {
-        this._detachGroup(event, groupToken);
-      });
-    }
-  }
-
   //-------------------------------------------------------
   //-- utilities
   //-------------------------------------------------------
@@ -331,7 +300,6 @@ export class EventEmitter<T_EventMap extends EventMap>
         const defaultHandler = this._defaultHandlers.get('*');
         if (defaultHandler) {
           containers.push({
-            groupToken: { name: 'default' },
             listener: defaultHandler,
             once: false,
           });
@@ -367,7 +335,6 @@ export class EventEmitter<T_EventMap extends EventMap>
       const defaultHandler = this._defaultHandlers.get(event);
       if (defaultHandler) {
         containers.push({
-          groupToken: { name: 'default' },
           listener: defaultHandler,
           once: false,
         });
@@ -396,14 +363,13 @@ export class EventEmitter<T_EventMap extends EventMap>
   //-------------------------------------------------------
   // implement abstract
   protected override _addListener<T_Event extends EventNames<T_EventMap>>(params: {
-    groupToken: GroupToken;
     event: T_Event;
     listener: EventListener<T_EventMap, T_Event>;
     postRemoved?: (event: EventNames<T_EventMap>) => void;
     once?: boolean;
     prepend?: boolean;
   }): this {
-    const { event, listener, postRemoved, groupToken, once = false, prepend = false } = params;
+    const { event, listener, postRemoved, once = false, prepend = false } = params;
 
     //fire (internal event)
     if (!isReservedEventName(event)) {
@@ -415,7 +381,6 @@ export class EventEmitter<T_EventMap extends EventMap>
 
     //add
     const container: Listener<T_EventMap> = {
-      groupToken: groupToken,
       listener: listener as EventListener<T_EventMap, EventNames<T_EventMap>>,
       postRemoved: postRemoved,
       once: once,
@@ -442,7 +407,7 @@ export class EventEmitter<T_EventMap extends EventMap>
     event: T_Event;
     listener: EventListener<T_EventMap, T_Event>;
   }): this {
-    const { event, listener /* ,groupToken */ } = params;
+    const { event, listener } = params;
 
     const containers = this._listeners.get(event) ?? [];
     // first match goes

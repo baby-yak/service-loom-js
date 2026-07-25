@@ -1,17 +1,17 @@
 import { enableMapSet, produce, type Draft } from 'immer';
 import type { StateProvider } from '../core/internal/providerTypes.js';
-import type { UnsubscribeFn } from '../core/types.js';
+import { _BRAND_REACTIVE_STATE } from '../core/internal/symbols.js';
 import type { StateMap } from '../state/index.js';
 import { StateClient_imp } from './internal/stateClient_imp.js';
 import { StateSelector_imp } from './internal/stateSelector_imp.js';
 import { isPlainObject } from './internal/utils.js';
 import type { ReactiveStateClient } from './reactiveStateClient.js';
+import type { ReactiveStateSource } from './reactiveStateSource.js';
 import {
   type StateListener,
   type StateListenersErrorHandlingType,
   type StateSelectFn,
 } from './types.js';
-import { _BRAND_REACTIVE_STATE } from '../core/internal/symbols.js';
 
 //-------------------------------------------------------
 // -- enables immer Map/Set support globally — see README
@@ -49,7 +49,9 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
  * state.update(draft => { draft.count++; });
  * ```
  */
-export class ReactiveState<S extends StateMap> implements StateProvider<ReactiveStateClient<S>> {
+export class ReactiveState<S extends StateMap>
+  implements ReactiveStateSource<S>, StateProvider<ReactiveStateClient<S>>
+{
   readonly [_BRAND_REACTIVE_STATE] = true;
 
   private _initial: S;
@@ -75,22 +77,6 @@ export class ReactiveState<S extends StateMap> implements StateProvider<Reactive
     this.client = new StateClient_imp(this);
   }
 
-  get<U = S>(select?: StateSelectFn<S, U>): U {
-    if (select) {
-      return select(this._state);
-    } else {
-      return this._state as unknown as U;
-    }
-  }
-
-  getInitialState<U = S>(select?: StateSelectFn<S, U>): U {
-    if (select) {
-      return select(this._initial);
-    } else {
-      return this._initial as unknown as U;
-    }
-  }
-
   /** Replaces the state. No-ops if the new value is the same reference (`Object.is`). */
   set(state: S): void {
     const prev = this._state;
@@ -103,7 +89,27 @@ export class ReactiveState<S extends StateMap> implements StateProvider<Reactive
     }
   }
 
-  subscribe(listener: StateListener<S>): UnsubscribeFn {
+  //-------------------------------------------------------
+  //-- implement ReactiveStateSource<S>
+  //-------------------------------------------------------
+
+  get<U = S>(select?: StateSelectFn<S, U>) {
+    if (select) {
+      return select(this._state);
+    } else {
+      return this._state as unknown as U;
+    }
+  }
+
+  getInitialState<U = S>(select?: StateSelectFn<S, U>) {
+    if (select) {
+      return select(this._initial);
+    } else {
+      return this._initial as unknown as U;
+    }
+  }
+
+  subscribe(listener: StateListener<S>) {
     const safeListener: StateListener<S> = (state, prev) => {
       try {
         listener(state, prev);
@@ -123,7 +129,7 @@ export class ReactiveState<S extends StateMap> implements StateProvider<Reactive
     };
   }
 
-  select<U>(selector: StateSelectFn<S, U>): ReactiveStateClient<U> {
+  select<U>(selector: StateSelectFn<S, U>) {
     return new StateSelector_imp(this, selector);
   }
 
