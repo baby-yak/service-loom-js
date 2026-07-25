@@ -45,7 +45,7 @@ export interface EventClient<T_EventMap extends EventMap> {
   /**
    * Adds a one-time listener. It is automatically removed after the first time
    * Calling the returned function removes the listener.
-   * (whichever happens first )
+   * (whichever happens first)
    */
   subscribeOnce<T_Event extends EventNames<T_EventMap>>(
     event: T_Event,

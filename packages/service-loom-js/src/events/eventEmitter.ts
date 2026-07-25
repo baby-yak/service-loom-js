@@ -108,8 +108,6 @@ export class EventEmitter<T_EventMap extends EventMap>
       },
       ...params,
     };
-    this._options.maxListeners = params?.maxListeners ?? EventEmitter.defaultMaxListeners;
-    this._options.listenersErrorHandling = params?.listenersErrorHandling ?? 'warn';
   }
   //-------------------------------------------------------
 

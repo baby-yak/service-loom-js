@@ -12,7 +12,7 @@ type Props = {};
 export default function Users({}: Props) {
   const users = useReactiveState(services.users.state, (s) => s.users);
 
-   const add = useActionAsync(services.users, 'add');
+  const add = useActionAsync(services.users, 'add');
   const fetch = useActionAsync(services.users.actions.fetch);
 
   useStateEffect(services.users, (s) => {
