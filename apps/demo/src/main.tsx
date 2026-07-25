@@ -2,12 +2,19 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
-import { app } from './services/app.tsx';
+import { app } from './services/app.ts';
 
 //start module
-app.events.on('errorStarting', (error) => console.error('errorStarting:', error));
-app.events.on('errorStopping', (error) => console.error('errorStopping:', error));
-app.start();
+
+app
+  .start()
+  .then(() => {
+    app.services.app.actions.setStarted(true);
+  })
+  .catch((e: unknown) => {
+    console.log('error stating module', e);
+    app.services.app.actions.setStarted(false);
+  });
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -2,21 +2,17 @@ import {
   createModule,
   type Module,
   type ModuleParams,
-  type RawService,
-  type ServiceToClient,
-} from "@baby-yak/service-loom-js";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  type ReactNode,
-} from "react";
+  type Service,
+  type ServiceClient,
+  type ServiceDescriptor,
+  type ValidConcreteService,
+} from '@baby-yak/service-loom-js';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 
-export type ServiceProviderProps<S extends RawService<any, any>> = {
+export type ServiceProviderProps<D extends ServiceDescriptor<any>> = {
   children?: ReactNode;
   /** Factory called once on mount to create the service instance. */
-  createService: () => S;
+  createService: () => ValidConcreteService<Service<D>>;
 };
 
 /**
@@ -40,41 +36,38 @@ export type ServiceProviderProps<S extends RawService<any, any>> = {
  * const counter = useService();
  * counter.actions.increment();
  */
-export function createServiceContext<S extends RawService<any, any>>(
-  params?: ModuleParams,
-) {
-  const context = createContext<ServiceToClient<S> | null>(null);
+export function createServiceContext<D extends ServiceDescriptor<any>>(params?: ModuleParams) {
+  // create inside the function ! new context hierarchy and type for every service/module kind.
+  const context = createContext<ServiceClient<D> | null>(null);
 
-  const ServiceProvider = ({
-    createService,
-    children,
-  }: ServiceProviderProps<S>) => {
-    const moduleRef = useRef<Module<{ theService: S }> | undefined>(undefined);
+  const ServiceProvider = ({ createService, children }: ServiceProviderProps<D>) => {
+    type M = { theService: Service<D> };
+
+    const moduleRef = useRef<Module<M> | undefined>(undefined);
 
     if (moduleRef.current == null) {
       const service = createService();
-      moduleRef.current = createModule({ theService: service }, params);
+      moduleRef.current = createModule<M>({ theService: service }, params);
     }
 
     useEffect(() => {
-      moduleRef.current?.start();
+      moduleRef.current?.start().catch((e: unknown) => console.error(e));
+
       return () => {
-        moduleRef.current?.stop();
+        moduleRef.current?.stop().catch((e: unknown) => console.error(e));
       };
     }, []);
 
     return (
-      <context.Provider value={moduleRef.current.services.theService}>
-        {children}
-      </context.Provider>
+      <context.Provider value={moduleRef.current.services.theService}>{children}</context.Provider>
     );
   };
 
-  const useService = (): ServiceToClient<S> => {
+  const useService = (): ServiceClient<D> => {
     const res = useContext(context);
     if (res == null) {
       throw new Error(
-        "useService was used without a matching Provider.\nDid you forget to use the <ServiceProvider> component in the tree?",
+        'useService was used without a matching Provider.\nDid you forget to use the <ServiceProvider> component in the tree?',
       );
     }
     return res;

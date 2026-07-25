@@ -1,9 +1,10 @@
-import {
-  type EventClient,
-  type EventListener,
-  type EventMap,
-  type EventNames,
-  type ServiceClient,
+import type {
+  EventClient,
+  EventListener,
+  EventMap,
+  EventNames,
+  ServiceClient,
+  ServiceDescriptor,
 } from '@baby-yak/service-loom-js';
 import { type DependencyList, useEffect } from 'react';
 import { extractEvents } from '../utils.js';
@@ -17,13 +18,8 @@ import { extractEvents } from '../utils.js';
  * @param listener callback invoked each time the event fires
  * @param deps controls when the subscription is re-created — include any values the listener closes over
  */
-export function useEvent<
-  EVENTS extends EventMap,
-  EVENTNAME extends EventNames<EVENTS>,
->(
-  target:
-    | EventClient<EVENTS>
-    | ServiceClient<{ events: EVENTS }, any>,
+export function useEvent<EVENTS extends EventMap, EVENTNAME extends EventNames<EVENTS>>(
+  target: EventClient<EVENTS> | ServiceClient<ServiceDescriptor<{ events: EVENTS }>>,
   event: EVENTNAME,
   listener: EventListener<EVENTS, EVENTNAME>,
   deps?: DependencyList,

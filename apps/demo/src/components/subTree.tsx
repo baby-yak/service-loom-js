@@ -1,8 +1,7 @@
 import type { Service } from '@baby-yak/service-loom-js';
 import { createModuleContext, useReactiveState } from '@baby-yak/service-loom-react';
 import classNames from 'classnames';
-import { CounterService, type ICounter } from '../services/courerService';
-import ModuleView from './moduleView';
+import { CounterService, type ICounter } from '../services/counterService';
 import styles from './subTree.module.css';
 
 type M = {
@@ -35,13 +34,11 @@ export default function SubTree({}: Props) {
 //-------------------------------------------------------
 type Inner1Props = {};
 function Inner1({}: Inner1Props) {
-  const module = useModule();
-  const services = module.services;
+  const services = useModule();
 
   return (
     <div className={classNames(styles.Inner)}>
-      <ModuleView module={module} />
-      <button onClick={() => services.counter.invoke.increment()}>+</button>
+      <button onClick={() => services.counter.actions.increment()}>+</button>
     </div>
   );
 }
@@ -49,8 +46,7 @@ function Inner1({}: Inner1Props) {
 //-------------------------------------------------------
 type Inner2Props = {};
 function Inner2({}: Inner2Props) {
-  const module = useModule();
-  const services = module.services;
+  const services = useModule();
   const state = useReactiveState(services.counter.state, (s) => s.count);
   return <div className={classNames(styles.Inner)}>inner count = {state}</div>;
 }

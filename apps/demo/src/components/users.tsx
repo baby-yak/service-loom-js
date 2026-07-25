@@ -1,33 +1,29 @@
-import {
-  useActionAsync,
-  useReactiveState,
-  useStateEffect,
-} from "@baby-yak/service-loom-react";
-import classNames from "classnames";
-import { useState } from "react";
-import { services } from "../services/app";
-import Card from "../ui/card";
-import styles from "./users.module.css";
-import { errorToString } from "../utils";
+import { useActionAsync, useReactiveState, useStateEffect } from '@baby-yak/service-loom-react';
+import classNames from 'classnames';
+import { useState } from 'react';
+import { services } from '../services/app';
+import Card from '../ui/card';
+import styles from './users.module.css';
+import { errorToString } from '../utils';
 
-const TAG = "users";
+const TAG = 'users';
 type Props = {};
 
 export default function Users({}: Props) {
   const users = useReactiveState(services.users.state, (s) => s.users);
 
-  const add = useActionAsync(services.users, "add");
-  const fetch = useActionAsync(services.users.invoke.fetch);
+   const add = useActionAsync(services.users, 'add');
+  const fetch = useActionAsync(services.users.actions.fetch);
 
   useStateEffect(services.users, (s) => {
-    console.log("state:", s);
+    console.log('state:', s);
   });
   useStateEffect(
     services.users,
     (s) => s.users,
     (s) => {
       console.log(
-        "users:",
+        'users:',
         s.map((x) => x.name),
       );
     },
@@ -46,7 +42,7 @@ export default function Users({}: Props) {
             error={add.error}
             onclick={(name) => add.execute(name)}
           />
-          <div>last user added {add.data ?? "?"}</div>
+          <div>last user added {add.data ?? '?'}</div>
           <div>{add.isError && JSON.stringify(add.error)}</div>
         </Card>
         <Card style={{ padding: 10 }}>
@@ -57,7 +53,7 @@ export default function Users({}: Props) {
             error={fetch.error}
             onclick={(id) => fetch.execute(id)}
           />
-          fetched: {fetch.data?.name ?? "?"}
+          fetched: {fetch.data?.name ?? '?'}
         </Card>
       </div>
 
@@ -91,7 +87,7 @@ function FormBox({
   isLoading,
   error,
 }: FormBoxProps) {
-  const [model, setModel] = useState(text ?? "");
+  const [model, setModel] = useState(text ?? '');
 
   return (
     <div className={classNames(styles.FormBox)}>
@@ -111,9 +107,7 @@ function FormBox({
         />
         <button onClick={() => onClick?.(model)}>{label}</button>
       </div>
-      {error != null && (
-        <div className={classNames(styles.error)}>{errorToString(error)}</div>
-      )}
+      {error != null && <div className={classNames(styles.error)}>{errorToString(error)}</div>}
     </div>
   );
 }
