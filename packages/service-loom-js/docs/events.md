@@ -168,8 +168,7 @@ emitter.setDefaultHandler('error', undefined);
 
 ```ts
 emitter.listenerCount('event'): number
-emitter.listeners('event'): Listener[]     // wrapped (once-aware)
-emitter.rawListeners('event'): Listener[]  // original functions
+emitter.listeners('event'): Listener[]
 emitter.eventNames(): string[]             // events with active listeners
 ```
 

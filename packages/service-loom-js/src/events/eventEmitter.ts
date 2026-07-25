@@ -224,20 +224,9 @@ export class EventEmitter<T_EventMap extends EventMap>
     return withoutWildcard;
   }
 
-  /**
-   * Returns the wrapped listener functions for the given event — these include
-   * the auto-remove logic injected by `once()` and `prependOnceListener()`.
-   * Use `rawListeners()` to get the original functions.
-   */
   listeners<T_Event extends EventNames<T_EventMap>>(
     event: T_Event,
   ): EventListener<T_EventMap, T_Event>[] {
-    const listeners = this._listeners.get(event) || [];
-    return listeners.map((x) => x.listener) as EventListener<T_EventMap, T_Event>[];
-  }
-
-  /** Returns the original listener functions, without any once-wrapper logic. */
-  rawListeners<T_Event extends EventNames<T_EventMap>>(event: T_Event) {
     const listeners = this._listeners.get(event) || [];
     return listeners.map((x) => x.listener) as EventListener<T_EventMap, T_Event>[];
   }

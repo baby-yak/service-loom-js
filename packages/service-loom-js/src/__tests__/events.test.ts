@@ -643,20 +643,6 @@ describe('EventEmitter', () => {
 
       expect(emitter.listenerCount('*')).toBe(2);
     });
-
-    it('rawListeners("*") returns the wildcard listeners', () => {
-      const emitter = new EventEmitter<TestEvents>();
-
-      const listener1 = vi.fn();
-      const listener2 = vi.fn();
-      const listener3 = vi.fn();
-
-      emitter.on('*', listener1);
-      emitter.on('*', listener2);
-      emitter.on('count', listener3);
-
-      expect(emitter.rawListeners('*')).toEqual([listener1, listener2]);
-    });
   });
 
   // -------------------------------------------------------
