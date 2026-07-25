@@ -3,15 +3,8 @@ import { _BRAND_ACTION_EXECUTER } from '../core/internal/symbols.js';
 import type { ActionClient } from './actionClient.js';
 import { ActionExecutionMapping } from './internal/types.js';
 import { createInvoker as createActionsClient } from './internal/utils.js';
-import type {
-  ActionHandler,
-  ActionMap,
-  ActionNames,
-  CatchAllActionHandler,
-  Invoker,
-} from './types.js';
+import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from './types.js';
 
-//export type ActionsConstructionParams = {};
 export type ActionExecuterParams = object;
 
 export class ActionExecuter<T_Map extends ActionMap> implements ActionsProvider<
@@ -66,7 +59,7 @@ export class ActionExecuter<T_Map extends ActionMap> implements ActionsProvider<
       return this._setHandler_obj(handler);
     }
 
-    //handler executor object
+    // catch-all handler
     if (action_or_handler === '*') {
       const handler = handlerFn as CatchAllActionHandler;
       return this._setHandler_catchAll(handler);

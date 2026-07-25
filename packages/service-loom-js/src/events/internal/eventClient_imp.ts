@@ -25,10 +25,6 @@ export class EventClient_imp<T_EventMap extends EventMap> implements EventClient
    * @param groupToken a unique group token (name is just a nicety not related to uniqueness, the object instance is unique)
    */
   constructor(groupToken: GroupToken, root: EventClient_imp<T_EventMap> | undefined) {
-    if (root === this) {
-      throw new Error('[EventClientBase] root cannot be === this');
-    }
-
     this.groupToken = groupToken;
     this.root = root;
   }

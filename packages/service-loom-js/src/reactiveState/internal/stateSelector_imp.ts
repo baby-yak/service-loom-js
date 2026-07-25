@@ -38,7 +38,8 @@ export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
     }
   }
   subscribe(listener: StateListener<U>): UnsubscribeFn {
-    let prev: U | undefined = undefined;
+    const INITIAL = Symbol();
+    let prev: U | typeof INITIAL = INITIAL;
 
     return this.source.subscribe((state) => {
       // no change on selected value - NOOP
@@ -46,11 +47,11 @@ export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
 
       const selected = this.fn(state);
 
-      if (prev !== undefined && Object.is(prev, selected)) {
+      if (prev !== INITIAL && Object.is(prev, selected)) {
         return;
       }
 
-      listener(selected, prev);
+      listener(selected, prev === INITIAL ? undefined : prev);
       prev = selected;
     });
   }
