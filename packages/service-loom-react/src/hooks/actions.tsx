@@ -86,7 +86,7 @@ export function useActionAsync(
   return useActionAsync_imp(fn);
 }
 
-function useActionAsync_imp(fn: (...args: any[]) => any): AsyncAction<any, any[]> {
+function useActionAsync_imp(func: (...args: unknown[]) => unknown): AsyncAction<any, any[]> {
   const refExecutionContext = useRef({});
 
   const [state, setState] = useState<AsyncActionState<any>>({
@@ -96,53 +96,54 @@ function useActionAsync_imp(fn: (...args: any[]) => any): AsyncAction<any, any[]
     isError: false,
   });
 
-  const execute = useCallback((...args: any[]) => {
-    const run = async () => {
-      //new exec context
-      const context = {};
-      refExecutionContext.current = context;
+  const execute = useCallback(
+    (...args: unknown[]) => {
+      const run = async () => {
+        //new exec context
+        const context = {};
+        refExecutionContext.current = context;
 
-      try {
-        setState((s) => ({
-          ...s,
-          // data: undefined, //dont. keep old data until result is back
-          error: undefined,
-          isLoading: true,
-          isError: false,
-        }));
+        try {
+          setState((s) => ({
+            ...s,
+            // data: undefined, //dont. keep old data until result is back
+            error: undefined,
+            isLoading: true,
+            isError: false,
+          }));
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument
-        const res = await fn(...args);
-        if (context !== refExecutionContext.current) {
-          // result does not match last (user re-ran the action) - ignore.
-          return;
+          const res = await func(...args);
+          if (context !== refExecutionContext.current) {
+            // result does not match last (user re-ran the action) - ignore.
+            return;
+          }
+          setState((s) => ({
+            ...s,
+            data: res,
+            error: undefined,
+            isLoading: false,
+            isError: false,
+          }));
+        } catch (error) {
+          if (context !== refExecutionContext.current) {
+            // result does not match last (user re-ran the action) - ignore.
+            return;
+          }
+          setState((s) => ({
+            ...s,
+            // data: undefined, //dont. keep old data with error flag lit
+            error: error,
+            isLoading: false,
+            isError: true,
+          }));
         }
-        setState((s) => ({
-          ...s,
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-          data: res,
-          error: undefined,
-          isLoading: false,
-          isError: false,
-        }));
-      } catch (error) {
-        if (context !== refExecutionContext.current) {
-          // result does not match last (user re-ran the action) - ignore.
-          return;
-        }
-        setState((s) => ({
-          ...s,
-          // data: undefined, //dont. keep old data with error flag lit
-          error: error,
-          isLoading: false,
-          isError: true,
-        }));
-      }
-    };
+      };
 
-    //just run
-    run().catch(() => {});
-  }, []);
+      //just run
+      run().catch((error: unknown) => console.error(error));
+    },
+    [func],
+  );
 
   return { ...state, execute };
 }

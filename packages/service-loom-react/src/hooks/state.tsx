@@ -5,7 +5,7 @@ import {
   type ServiceDescriptor,
   type StateSelectFn,
 } from '@baby-yak/service-loom-js';
-import { type DependencyList, useCallback, useSyncExternalStore } from 'react';
+import { type DependencyList, useCallback, useMemo, useSyncExternalStore } from 'react';
 
 //-------------------------------------------------------
 // overload 1: whole state
@@ -76,25 +76,25 @@ function useReactiveState_imp<S, U = S>(
   selector: StateSelectFn<S, U> | undefined,
   deps: DependencyList,
 ) {
-  // subscribe function
-  const subscribe = useCallback((onStoreChange: () => void) => {
-    const client = getStateClient(target, selector);
-    return client.subscribe(onStoreChange);
-  }, deps);
-
-  // get function
-  const get = useCallback(() => {
-    const client = getStateClient(target, selector);
-    return client.get();
-  }, deps);
-
-  // get initial function
-  const getInitialState = useCallback(() => {
-    const client = getStateClient(target, selector);
-    return client.getInitialState();
-  }, deps);
+  const client = useMemo(() => getStateClient(target, selector), deps);
 
   // the store:
+
+  const get = useCallback(() => {
+    return client.get();
+  }, [client]);
+
+  const subscribe = useCallback(
+    (callback: () => void) => {
+      return client.subscribe(callback);
+    },
+    [client],
+  );
+
+  const getInitialState = useCallback(() => {
+    return client.getInitialState();
+  }, [client]);
+
   return useSyncExternalStore(subscribe, get, getInitialState);
 }
 
