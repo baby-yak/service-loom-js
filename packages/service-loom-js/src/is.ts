@@ -24,7 +24,8 @@ import type { ServiceDescriptor } from './services/types.js';
 import type { StateMap } from './state/types.js';
 
 function is<T>(x: unknown, verify: (x: T) => boolean): x is T {
-  return x != null && verify(x as T);
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-conversion
+  return x != null && !!verify(x as T);
 }
 
 export function isService<D extends ServiceDescriptor<any> = any>(x: unknown): x is Service<D> {
