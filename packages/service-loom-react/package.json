@@ -40,8 +40,8 @@
     "lint:fix": "eslint src --fix"
   },
   "peerDependencies": {
-    "@baby-yak/service-loom-js": "^1.0.0",
-    "react": ">=17"
+    "@baby-yak/service-loom-js": "^2.0.0",
+    "react": ">=18"
   },
   "devDependencies": {
     "@baby-yak/service-loom-js": "*",
