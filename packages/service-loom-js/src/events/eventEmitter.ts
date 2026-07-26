@@ -164,10 +164,7 @@ export class EventEmitter<T_EventMap extends EventMap>
     listener: EventListener<T_EventMap, T_Event> | undefined,
   ): this {
     if (listener) {
-      this._defaultHandlers.set(
-        event,
-        listener as EventListener<T_EventMap, EventNames<T_EventMap>>,
-      );
+      this._defaultHandlers.set(event, listener);
     } else {
       this._defaultHandlers.delete(event);
     }
@@ -220,7 +217,7 @@ export class EventEmitter<T_EventMap extends EventMap>
     event: T_Event,
   ): EventListener<T_EventMap, T_Event>[] {
     const listeners = this._listeners.get(event) || [];
-    return listeners.map((x) => x.listener) as EventListener<T_EventMap, T_Event>[];
+    return listeners.map((x) => x.listener);
   }
 
   //-------------------------------------------------------
@@ -305,21 +302,26 @@ export class EventEmitter<T_EventMap extends EventMap>
           });
         }
       }
-      // fire all listeners
+
+      // fire all listeners (sync/async)
       for (const container of containers) {
         const { listener, once } = container;
         try {
-          listener(event, ...args);
-
-          //remove if "once"
-          if (once) {
-            this._removeListener({
-              event: '*',
-              listener: listener as EventListener<T_EventMap, '*'>,
+          const result = listener(event, ...args);
+          if (result instanceof Promise) {
+            result.catch((err: unknown) => {
+              this._handleListenerException('*', err);
             });
           }
         } catch (err) {
           this._handleListenerException('*', err);
+        }
+        //remove if "once"
+        if (once) {
+          this._removeListener({
+            event: '*',
+            listener: listener,
+          });
         }
       }
     }
@@ -344,16 +346,21 @@ export class EventEmitter<T_EventMap extends EventMap>
     for (const container of containers) {
       const { listener, once } = container;
       try {
-        listener(...args);
-        //remove if "once"
-        if (once) {
-          this._removeListener({
-            event: event,
-            listener: listener as EventListener<T_EventMap, T_Event>,
+        const result = listener(...args);
+        if (result instanceof Promise) {
+          result.catch((err: unknown) => {
+            this._handleListenerException(event, err);
           });
         }
       } catch (err) {
         this._handleListenerException(event, err);
+      }
+      //remove if "once"
+      if (once) {
+        this._removeListener({
+          event: event,
+          listener: listener,
+        });
       }
     }
 
@@ -381,7 +388,7 @@ export class EventEmitter<T_EventMap extends EventMap>
 
     //add
     const container: Listener<T_EventMap> = {
-      listener: listener as EventListener<T_EventMap, EventNames<T_EventMap>>,
+      listener: listener,
       postRemoved: postRemoved,
       once: once,
     };

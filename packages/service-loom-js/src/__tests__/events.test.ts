@@ -906,4 +906,115 @@ describe('EventEmitter', () => {
       expect(countDefault).not.toHaveBeenCalled();
     });
   });
+
+  // -------------------------------------------------------
+  // async listeners
+  // -------------------------------------------------------
+  describe('async listeners', () => {
+    it('async listener is called on emit', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const calls: string[] = [];
+
+      emitter.on('greet', async (name) => {
+        calls.push(name);
+        await Promise.resolve();
+      });
+      emitter.emit('greet', 'Alice');
+
+      expect(calls).toEqual(['Alice']);
+    });
+
+    it('mix of sync and async listeners all run in order', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const calls: string[] = [];
+
+      emitter.on('greet', (name) => calls.push(`sync:${name}`));
+      emitter.on('greet', async (name) => {
+        calls.push(`async:${name}`);
+        await Promise.resolve();
+      });
+      emitter.emit('greet', 'Alice');
+
+      expect(calls).toEqual(['sync:Alice', 'async:Alice']);
+    });
+
+    it('async listener error is caught and routed to error handler', async () => {
+      const emitter = new EventEmitter<TestEvents>({ listenersErrorHandling: 'warn' });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      emitter.on('greet', async () => {
+        await Promise.resolve();
+        throw new Error('async boom');
+      });
+      emitter.emit('greet', 'Alice');
+
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
+    });
+
+    it('async listener error does not prevent subsequent listeners from running',  () => {
+      const emitter = new EventEmitter<TestEvents>({ listenersErrorHandling: 'warn' });
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const next = vi.fn();
+
+      emitter.on('greet', async () => {
+        await Promise.resolve();
+        throw new Error('async boom');
+      });
+      emitter.on('greet', next);
+      emitter.emit('greet', 'Alice');
+
+      expect(next).toHaveBeenCalledWith('Alice');
+      warn.mockRestore();
+    });
+
+    it('once() with async listener fires only once then auto-removes', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const fn = vi.fn(async () => { await Promise.resolve(); });
+
+      emitter.once('greet', fn);
+      emitter.emit('greet', 'Alice');
+      emitter.emit('greet', 'Bob');
+
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenCalledWith('Alice');
+      expect(emitter.listenerCount('greet')).toBe(0);
+    });
+
+    it('subscribeOnce() with async listener fires only once', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const fn = vi.fn(async () => { await Promise.resolve(); });
+
+      emitter.subscribeOnce('greet', fn);
+      emitter.emit('greet', 'Alice');
+      emitter.emit('greet', 'Bob');
+
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it('async wildcard listener fires on every user event', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const events: string[] = [];
+
+      emitter.on('*', async (event) => {
+        events.push(event);
+        await Promise.resolve();
+      });
+      emitter.emit('greet', 'Alice');
+      emitter.emit('count', 42);
+
+      expect(events).toEqual(['greet', 'count']);
+    });
+
+    it('listener returning a non-Promise value does not throw', () => {
+      const emitter = new EventEmitter<TestEvents>();
+      const fn = vi.fn(() => 42);
+
+      emitter.on('greet', fn);
+      expect(() => emitter.emit('greet', 'Alice')).not.toThrow();
+      expect(fn).toHaveBeenCalledWith('Alice');
+    });
+  });
 });

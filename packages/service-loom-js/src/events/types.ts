@@ -8,7 +8,10 @@ export type EventMap = {
 export type EventListener<
   T_EventMap extends EventMap,
   T_Event extends EventNames<T_EventMap>,
-> = CombinedEvents<T_EventMap>[T_Event];
+> = CombinedEvents<T_EventMap>[T_Event] extends (...args: infer Args) => any
+  ? //loosen the return type - can be void / promise or anything else
+    (...args: Args) => unknown
+  : never;
 
 export type EventNames<T_Map extends EventMap> = keyof CombinedEvents<T_Map> & string;
 
