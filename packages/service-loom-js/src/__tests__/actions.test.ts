@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ActionExecuter } from '../actions/actionExecuter.js';
+import { ActionExecuter } from '../actions/index.js';
 
 type TestActions = {
   greet(name: string): string;

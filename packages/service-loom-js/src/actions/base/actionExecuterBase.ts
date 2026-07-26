@@ -1,24 +1,21 @@
-import type { ActionsProvider } from '../core/internal/providerTypes.js';
-import { _BRAND_ACTION_EXECUTER } from '../core/internal/symbols.js';
-import type { ActionClient } from './actionClient.js';
+import type {
+  ActionExecuterParams,
+  ActionHandler,
+  ActionMap,
+  ActionNames,
+  CatchAllActionHandler,
+} from '../types.js';
+import type { ActionClientBase } from './actionClientBase.js';
 import { ExecutionMapper } from './internal/ExecutionMapper.js';
-import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from './types.js';
 
-export type ActionExecuterParams = object;
+export class ActionExecuterBase<T_Map extends ActionMap, T_Client extends ActionClientBase<T_Map>> {
+  private _exec: ExecutionMapper<T_Map, T_Client>;
+  readonly invoke: T_Client;
 
-export class ActionExecuter<T_Map extends ActionMap> implements ActionsProvider<
-  ActionClient<T_Map>
-> {
-  readonly [_BRAND_ACTION_EXECUTER] = true;
-
-  private _exec: ExecutionMapper<T_Map>;
-  readonly invoke: ActionClient<T_Map>;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  constructor(_params?: ActionExecuterParams) {
+  constructor(_params?: ActionExecuterParams, ...clientBrandProp: (string | symbol)[]) {
     //create the invoker
-    this._exec = new ExecutionMapper<T_Map>();
-    this.invoke = this._exec.createProxyClient();
+    this._exec = new ExecutionMapper<T_Map, T_Client>();
+    this.invoke = this._exec.createProxyClient(...clientBrandProp);
   }
 
   //-------------------------------------------------------

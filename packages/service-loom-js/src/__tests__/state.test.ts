@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ReactiveState } from '../reactiveState/reactiveState.js';
+import { ReactiveState } from '../state/local/reactiveState.js';
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------

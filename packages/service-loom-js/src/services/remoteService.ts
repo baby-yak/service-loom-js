@@ -1,7 +1,7 @@
-import { ActionExecuter } from '../actions/actionExecuter.js';
-import { _BRAND_REMOTE_SERVICE_, _BRAND_REMOTE_SERVICE_CLIENT } from '../core/internal/symbols.js';
+import { RemoteActionExecuter } from '../actions/index.js';
+import { _BRAND_REMOTE_SERVICE_, _BRAND_REMOTE_SERVICE_CLIENT_ } from '../core/internal/symbols.js';
 import { EventEmitter } from '../events/eventEmitter.js';
-import { ReactiveState } from '../reactiveState/reactiveState.js';
+import { ReactiveState } from '../state/local/reactiveState.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {
@@ -17,7 +17,7 @@ import type { ServiceDescriptor } from './types.js';
 //-------------------------------------------------------
 
 type Providers<Descriptor extends ServiceDescriptor<any>> = {
-  actions: ActionExecuter<ActionsOfWithFallback<Descriptor>>;
+  actions: RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>;
   state: ReactiveState<StateOfWithFallback<Descriptor>>;
   events: EventEmitter<EventsOfWithFallback<Descriptor>>;
 };
@@ -29,7 +29,7 @@ type Providers<Descriptor extends ServiceDescriptor<any>> = {
 export class RemoteServiceClient<
   Descriptor extends ServiceDescriptor<any>,
 > extends ServiceClientBase<Providers<Descriptor>> {
-  readonly [_BRAND_REMOTE_SERVICE_CLIENT] = true;
+  readonly [_BRAND_REMOTE_SERVICE_CLIENT_] = true;
 }
 
 //-------------------------------------------------------
@@ -46,7 +46,7 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
   constructor(name: string | undefined, ...args: StateArgs<StateOfWithFallback<Descriptor>>) {
     const initialState = args[0] as StateOfWithFallback<Descriptor>;
 
-    const actions = new ActionExecuter<ActionsOfWithFallback<Descriptor>>();
+    const actions = new RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>();
     const state = new ReactiveState<StateOfWithFallback<Descriptor>>(initialState);
     const events = new EventEmitter<EventsOfWithFallback<Descriptor>>();
 
@@ -59,6 +59,9 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
 
     super(name, actions, state, events, client);
 
-    this.actions.setHandler(this as any as ActionsOfWithFallback<Descriptor>);
+    this.actions.setHandler('*', (action, ...args) => {
+      console.log(`invoked ${action} with ${args.toString()}`);
+      throw new Error(`action not implemented [${name}.${action}]`);
+    });
   }
 }

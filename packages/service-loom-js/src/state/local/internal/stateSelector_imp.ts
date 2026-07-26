@@ -1,4 +1,4 @@
-import type { UnsubscribeFn } from '../../core/types.js';
+import type { UnsubscribeFn } from '../../../core/types.js';
 import type { ReactiveState } from '../reactiveState.js';
 import { ReactiveStateClient } from '../reactiveStateClient.js';
 import type { StateListener, StateSelectFn } from '../types.js';

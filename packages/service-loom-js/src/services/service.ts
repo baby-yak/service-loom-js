@@ -1,10 +1,14 @@
-import { ActionExecuter } from '../actions/actionExecuter.js';
-import { _BRAND_SERVICE_, _BRAND_SERVICE_CLIENT_, _DEPENDENCIES_ } from '../core/internal/symbols.js';
+import { ActionExecuter } from '../actions/index.js';
+import {
+  _BRAND_SERVICE_,
+  _BRAND_SERVICE_CLIENT_,
+  _DEPENDENCIES_,
+} from '../core/internal/symbols.js';
 import type { Empty } from '../core/types.js';
 import { EventEmitter } from '../events/eventEmitter.js';
 import type { Module } from '../modules/module.js';
 import type { ModuleClients, ModuleDescriptor } from '../modules/types.js';
-import { ReactiveState } from '../reactiveState/reactiveState.js';
+import { ReactiveState } from '../state/local/reactiveState.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {

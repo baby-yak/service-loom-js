@@ -13,12 +13,20 @@ export const _BRAND_REMOTE_SERVICE_: unique symbol = Symbol('_REMOTE_SERVICE_');
 
 export const _BRAND_SERVICE_CLIENT_BASE_: unique symbol = Symbol('_BRAND_SERVICE_CLIENT_BASE_');
 export const _BRAND_SERVICE_CLIENT_: unique symbol = Symbol('_BRAND_SERVICE_CLIENT_');
-export const _BRAND_REMOTE_SERVICE_CLIENT: unique symbol = Symbol('_BRAND_REMOTE_SERVICE_CLIENT');
+export const _BRAND_REMOTE_SERVICE_CLIENT_: unique symbol = Symbol('_BRAND_REMOTE_SERVICE_CLIENT_');
 
 // provider brands
-export const _BRAND_REACTIVE_STATE: unique symbol = Symbol('_BRAND_REACTIVE_STATE');
-export const _BRAND_REACTIVE_STATE_CLIENT: unique symbol = Symbol('_BRAND_REACTIVE_STATE_CLIENT');
-export const _BRAND_EVENT_EMITTER: unique symbol = Symbol('_BRAND_EVENT_EMITTER');
-export const _BRAND_EVENT_EMITTER_CLIENT: unique symbol = Symbol('_BRAND_EVENT_EMITTER_CLIENT');
-export const _BRAND_ACTION_EXECUTER: unique symbol = Symbol('_BRAND_ACTION_EXECUTER');
-export const _BRAND_ACTION_EXECUTER_CLIENT: unique symbol = Symbol('_BRAND_ACTION_EXECUTER_CLIENT');
+export const _BRAND_ACTION_EXECUTER_: unique symbol = Symbol('_BRAND_ACTION_EXECUTER_');
+export const _BRAND_ACTION_CLIENT_: unique symbol = Symbol('_BRAND_ACTION_CLIENT_');
+export const _BRAND_REMOTE_ACTION_EXECUTER_: unique symbol = Symbol(
+  '_BRAND_REMOTE_ACTION_EXECUTER_',
+);
+export const _BRAND_REMOTE_ACTION_CLIENT_: unique symbol = Symbol('_BRAND_REMOTE_ACTION_CLIENT_');
+
+export const _BRAND_REACTIVE_STATE_: unique symbol = Symbol('_BRAND_REACTIVE_STATE_');
+export const _BRAND_REACTIVE_STATE_CLIENT_: unique symbol = Symbol('_BRAND_REACTIVE_STATE_CLIENT_');
+export const _BRAND_REMOTE_STATE_: unique symbol = Symbol('_BRAND_REMOTE_STATE_');
+export const _BRAND_REMOTE_STATE_CLIENT_: unique symbol = Symbol('_BRAND_REMOTE_STATE_CLIENT_');
+
+export const _BRAND_EVENT_EMITTER_: unique symbol = Symbol('_BRAND_EVENT_EMITTER_');
+export const _BRAND_EVENT_CLIENT_: unique symbol = Symbol('_BRAND_EVENT_CLIENT_');

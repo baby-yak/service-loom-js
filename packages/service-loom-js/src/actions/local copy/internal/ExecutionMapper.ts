@@ -1,6 +1,6 @@
-import { _BRAND_ACTION_EXECUTER_CLIENT } from '../../core/internal/symbols.js';
+import { _BRAND_ACTION_CLIENT_ } from '../../../core/internal/symbols.js';
+import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from '../../types.js';
 import type { ActionClient } from '../actionClient.js';
-import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from '../types.js';
 
 export class ExecutionMapper<T_Map extends ActionMap> {
   private mapping: Map<ActionNames<T_Map>, ActionHandler<T_Map, any>> = new Map();
@@ -50,7 +50,7 @@ export class ExecutionMapper<T_Map extends ActionMap> {
       {
         get: (target, prop) => {
           // branding
-          if (prop === _BRAND_ACTION_EXECUTER_CLIENT) {
+          if (prop === _BRAND_ACTION_CLIENT_) {
             return true;
           }
 

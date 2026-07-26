@@ -1,5 +1,5 @@
-import type { UnsubscribeFn } from '../core/types.js';
-import type { StateMap } from '../state/types.js';
+import type { UnsubscribeFn } from '../../core/types.js';
+import type { StateMap } from '../types.js';
 import type { StateListener, StateSelectFn } from './types.js';
 
 export interface ReactiveStateSource<S extends StateMap> {

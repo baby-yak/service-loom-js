@@ -1,5 +1,5 @@
-import type { ListenersErrorHandlingType } from '../core/types.js';
-import type { StateMap } from '../state/types.js';
+import type { ListenersErrorHandlingType } from '../../core/types.js';
+import type { StateMap } from '../types.js';
 
 /**
  * Callback invoked whenever state changes.
