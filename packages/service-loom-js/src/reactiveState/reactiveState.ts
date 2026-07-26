@@ -1,15 +1,17 @@
-import { enableMapSet, produce, type Draft } from "immer";
-import type { UnsubscribeFn } from "../core/types.js";
-import type { RawStateProvider } from "../state/index.js";
-import { StateClient_imp } from "./internal/stateClient_imp.js";
-import { StateSelector_imp } from "./internal/stateSelector_imp.js";
-import { isPlainObject } from "./internal/utils.js";
-import type { ReactiveStateClient } from "./reactiveStateClient.js";
+import { enableMapSet, produce, type Draft } from 'immer';
+import type { StateProvider } from '../core/internal/providerTypes.js';
+import { _BRAND_REACTIVE_STATE } from '../core/internal/symbols.js';
+import type { StateMap } from '../state/index.js';
+import { StateClient_imp } from './internal/stateClient_imp.js';
+import { StateSelector_imp } from './internal/stateSelector_imp.js';
+import { isPlainObject } from './internal/utils.js';
+import type { ReactiveStateClient } from './reactiveStateClient.js';
+import type { ReactiveStateSource } from './reactiveStateSource.js';
 import {
   type StateListener,
   type StateListenersErrorHandlingType,
   type StateSelectFn,
-} from "./types.js";
+} from './types.js';
 
 //-------------------------------------------------------
 // -- enables immer Map/Set support globally — see README
@@ -29,7 +31,7 @@ type ListenerContainer<S> = {
 };
 
 const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
-  listenersErrorHandling: "warn",
+  listenersErrorHandling: 'warn',
 };
 
 /**
@@ -47,8 +49,10 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
  * state.update(draft => { draft.count++; });
  * ```
  */
-export class ReactiveState<S> implements RawStateProvider<S> {
-  //instance marker
+export class ReactiveState<S extends StateMap>
+  implements ReactiveStateSource<S>, StateProvider<ReactiveStateClient<S>>
+{
+  readonly [_BRAND_REACTIVE_STATE] = true;
 
   private _initial: S;
   private _state: S;
@@ -73,22 +77,6 @@ export class ReactiveState<S> implements RawStateProvider<S> {
     this.client = new StateClient_imp(this);
   }
 
-  get<U = S>(select?: StateSelectFn<S, U>): U {
-    if (select) {
-      return select(this._state);
-    } else {
-      return this._state as unknown as U;
-    }
-  }
-
-  getInitialState<U = S>(select?: StateSelectFn<S, U>): U {
-    if (select) {
-      return select(this._initial);
-    } else {
-      return this._initial as unknown as U;
-    }
-  }
-
   /** Replaces the state. No-ops if the new value is the same reference (`Object.is`). */
   set(state: S): void {
     const prev = this._state;
@@ -101,7 +89,27 @@ export class ReactiveState<S> implements RawStateProvider<S> {
     }
   }
 
-  subscribe(listener: StateListener<S>): UnsubscribeFn {
+  //-------------------------------------------------------
+  //-- implement ReactiveStateSource<S>
+  //-------------------------------------------------------
+
+  get<U = S>(select?: StateSelectFn<S, U>) {
+    if (select) {
+      return select(this._state);
+    } else {
+      return this._state as unknown as U;
+    }
+  }
+
+  getInitialState<U = S>(select?: StateSelectFn<S, U>) {
+    if (select) {
+      return select(this._initial);
+    } else {
+      return this._initial as unknown as U;
+    }
+  }
+
+  subscribe(listener: StateListener<S>) {
     const safeListener: StateListener<S> = (state, prev) => {
       try {
         listener(state, prev);
@@ -121,7 +129,7 @@ export class ReactiveState<S> implements RawStateProvider<S> {
     };
   }
 
-  select<U>(selector: StateSelectFn<S, U>): ReactiveStateClient<U> {
+  select<U>(selector: StateSelectFn<S, U>) {
     return new StateSelector_imp(this, selector);
   }
 
@@ -139,10 +147,10 @@ export class ReactiveState<S> implements RawStateProvider<S> {
   update(recipe: Partial<S> | ((draft: Draft<S>) => void)): void {
     const prev = this._state;
     let next: S;
-    if (typeof recipe === "function") {
-      if (typeof prev !== "object" || prev === null) {
+    if (typeof recipe === 'function') {
+      if (typeof prev !== 'object' || prev === null) {
         throw new Error(
-          "update() with a recipe is not supported for primitive state. Use set() instead.",
+          'update() with a recipe is not supported for primitive state. Use set() instead.',
         );
       }
       next = produce<S>(prev, (update) => {
@@ -165,7 +173,7 @@ export class ReactiveState<S> implements RawStateProvider<S> {
   updatePure(state: Partial<S> | ((state: S) => S)): void {
     const prev = this._state;
     const next: S =
-      typeof state === "function"
+      typeof state === 'function'
         ? state(prev)
         : isPlainObject(prev)
           ? { ...prev, ...state }
@@ -179,11 +187,11 @@ export class ReactiveState<S> implements RawStateProvider<S> {
   private _handleListenerException(err: unknown) {
     const handling = this._options.listenersErrorHandling;
 
-    if (handling === "throw") {
+    if (handling === 'throw') {
       throw err;
     }
 
-    if (typeof handling === "function") {
+    if (typeof handling === 'function') {
       handling(err);
       return;
     }
@@ -191,15 +199,15 @@ export class ReactiveState<S> implements RawStateProvider<S> {
     const msg = `[${this.constructor.name}] listener error`;
 
     switch (handling) {
-      case "ignore":
+      case 'ignore':
         break;
-      case "log":
+      case 'log':
         console.log(msg, err);
         break;
-      case "warn":
+      case 'warn':
         console.warn(msg, err);
         break;
-      case "error":
+      case 'error':
         console.error(msg, err);
         break;
       default: {

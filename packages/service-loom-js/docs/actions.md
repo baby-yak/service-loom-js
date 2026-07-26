@@ -22,11 +22,10 @@ actions.setHandler('add', (a, b) => a + b);
 actions.invoke.greet('Alice'); // Hello, Alice
 actions.invoke.add(1, 2); // 3
 
-// later, for letting clients interact with this action executor in a safe way:
-// (only invocation, no other control)
-const client = actions.client;
-client.invoke.greet('Alice'); // Hello, Alice
-client.invoke.add(1, 2); // 3
+// actions.invoke is the read-only handle — hand it out to consumers:
+const client = actions.invoke;
+client.greet('Alice'); // Hello, Alice
+client.add(1, 2); // 3
 ```
 
 ## Wiring up a class
@@ -71,23 +70,23 @@ Priority order: **individual handler → execution target → catch-all → thro
 
 ## Read-only client
 
-`actions.client` is an `ActionClient` — exposes an `invoke` proxy identical to `actions.invoke`, but without `setHandler`. Use it to give consumers call access without exposing control.
+`actions.invoke` is an `ActionClient` — a live proxy that calls through to registered handlers but has no `setHandler`. Pass `actions.invoke` to consumers who need to call actions but must not configure handlers.
 
 ```ts
-const client = actions.client;
+const client = actions.invoke;
 
-client.invoke.greet('Alice'); // works
+client.greet('Alice'); // works
 // client.setHandler(...)  — not available on ActionClient
 ```
 
-Both `invoke` and `client.invoke` are live — they always reflect the latest registered handlers.
+`actions.invoke` is live — it always reflects the latest registered handlers, even ones registered after it was obtained.
 
 ```ts
-const client = actions.client;
+const client = actions.invoke;
 
 // Register *after* getting the client — still works
 actions.setHandler('greet', (name) => console.log(`Hi ${name}`));
-client.invoke.greet('Alice'); // Hi Alice
+client.greet('Alice'); // Hi Alice
 ```
 
 ## Async actions

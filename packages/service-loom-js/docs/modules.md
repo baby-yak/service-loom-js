@@ -13,13 +13,9 @@ const app = createModule({
   db: new DbService(),
 });
 
-// start all services — fire and forget, errors go to module.events
-app.start();
+await app.start();
 
-// later, stop all services (on app exit):
-// app.stop();
-
-// export the service clients container, to be used across the application
+// export the typed service client map across the application:
 export const services = app.services;
 ```
 
@@ -34,10 +30,10 @@ services.db.state.subscribe((s) => console.log(s));
 ## `createModule` — call signatures
 
 ```ts
-// infer module shape from services passed
+// infer module shape from the services passed
 createModule({ counter: new CounterService(), server: new ServerService() })
 
-// with options — name and verbose are both optional
+// with options
 createModule(
   { counter: new CounterService(), server: new ServerService() },
   { name: 'app', verbose: true },
@@ -49,9 +45,7 @@ createModule<App>({ counter: new CounterService(), server: new ServerService() }
 
 ## Defining the module type
 
-The module type can be set explicitly or inferred — without a type param, TypeScript infers the shape from the services you pass.
-
-**Inferred** — simple and fast:
+Without a type param, TypeScript infers the shape from the services you pass:
 
 ```ts
 const app = createModule({
@@ -61,8 +55,7 @@ const app = createModule({
 });
 ```
 
-**Explicit** — better for type safety and for swapping implementations later.
-Values must be `Service<D>` instances (or any `RawService` subclass):
+Use an explicit descriptor for stronger type safety or to document the intended shape. Values must be `Service<D>` (or `RemoteService<D>`) instances:
 
 ```ts
 type App = {
@@ -88,96 +81,50 @@ app.services.server.events.on('connected', handler);
 app.services.server.actions.connect(8080);
 ```
 
-**Typing `module.services`** — use `ModuleServiceClients` to get the type:
+**Typing `module.services`** — use `ModuleClients` to extract the type:
 
 ```ts
+import type { ModuleClients } from '@baby-yak/service-loom-js';
+
 // from the descriptor type:
-const services: ModuleServiceClients<App> = app.services;
-
-// from the module instance:
-const services: ModuleServiceClients<typeof app> = app.services;
-```
-
-## `module.state`
-
-Reactive lifecycle state. Subscribe to react to `isStarted` changes without polling.
-
-```ts
-app.state.subscribe((state) => {
-  console.log('module started:', state.isStarted);
-});
-
-// or get current value:
-const { isStarted } = app.state.get();
-```
-
-`isStarted` is `true` after `start()` completes and `false` after `stop()`.
-
-## `module.events`
-
-Lifecycle events fired after each operation completes.
-
-```ts
-app.events.on('started', () => console.log('all services ready'));
-app.events.on('stopped', () => console.log('all services stopped'));
-app.events.on('errorStarting', (err) => console.error('start failed:', err));
-app.events.on('errorStopping', (err) => console.error('stop failed:', err));
-```
-
-If no listener is registered for `errorStarting` or `errorStopping`, the error is logged to `console.error` by default.
-
-## `module.client`
-
-A `ModuleClient` — a read-only facade with `state`, `events`, and `services`, but without `start` or `stop`. Safe to pass to consumers who should observe the module but not control its lifecycle.
-
-```ts
-const client = app.client;
-client.state.subscribe(...)   // ✓
-client.events.on(...)         // ✓
-client.services.server...     // ✓
-client.start()                // ✗ — not available
+const services: ModuleClients<App> = app.services;
 ```
 
 ## Lifecycle
 
 ### Startup — `module.start()`
 
-Returns `void` — fire and forget. React to completion via events or `waitForStart()`.
+Runs three phases in sequence. Within each phase, all services run **in parallel**; the next phase begins only after every service completes the current one.
+
+```
+onServiceInit       — all services run in parallel
+onServiceStart      — all services run in parallel
+onServiceAfterStart — all services run in parallel
+```
 
 ```ts
-app.start();
-app.events.on('started', () => { /* all services ready */ });
-
-// or await completion explicitly:
-app.start();
-await app.waitForStart(); // resolves on 'started', rejects on 'errorStarting'
+await app.start();
+// all services fully started at this point
 ```
 
-Runs three phases in order. Within each phase all services run **in parallel**; the next phase begins only after all services complete the current one.
-
-```
-init        — all services run in parallel
-start       — all services run in parallel
-afterStart  — all services run in parallel
-```
+The promise rejects if any service throws during startup.
 
 ### Shutdown — `module.stop()`
 
-Same pattern — void, event-driven.
+Runs two phases in sequence, in parallel per phase:
+
+```
+onServiceBeforeStop — all services run in parallel
+onServiceStop       — all services run in parallel
+```
 
 ```ts
-app.stop();
-await app.waitForStop(); // resolves on 'stopped', rejects on 'errorStopping'
+await app.stop();
 ```
 
-```
-beforeStop  — all services run in parallel
-stop        — all services run in parallel
-```
+Concurrent calls are safe — a `stop()` that arrives while `start()` is in progress will wait for startup to finish before running.
 
-This sequencing is what makes cross-service coordination safe. By `onServiceStart`, every service has already completed its own initialization, so it's safe to register listeners or call actions on other services.
-
-Concurrent calls are safe — a `stop()` queued while `start()` is in progress will wait for start to finish first.
+Calling `start()` when already started, or `stop()` when already stopped, is a no-op.
 
 See [→ docs/services.md](./services.md) for what each lifecycle method is intended for.
 
@@ -186,17 +133,24 @@ See [→ docs/services.md](./services.md) for what each lifecycle method is inte
 ```ts
 const app = createModule(
   { server: new ServerService() },
-  { verbose: true, name: 'app' }, // name is optional
+  { name: 'app', verbose: true },
 );
 ```
+
+| Option    | Type      | Default       | Description                              |
+| --------- | --------- | ------------- | ---------------------------------------- |
+| `name`    | `string`  | `'untitled'`  | Identifies the module in logs            |
+| `verbose` | `boolean` | `false`       | Log each phase transition to the console |
 
 With `verbose: true`, the console prints each phase transition as it completes:
 
 ```
 module initialization...
- > service [ server ] : init complete
- > service [ db     ] : init complete
- > service [ server ] : start complete
- > service [ db     ] : start complete
+ ✅ [server ] - init
+ ✅ [db     ] - init
+ ✅ [server ] - start
+ ✅ [db     ] - start
+ ✅ [server ] - after-start
+ ✅ [db     ] - after-start
 module initialization complete
 ```

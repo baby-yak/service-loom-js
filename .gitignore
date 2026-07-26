@@ -1,3 +1,6 @@
+service-loom-js OLD/
+
+
 node_modules/
 dist/
 coverage/
@@ -7,6 +10,7 @@ coverage/
 CLAUDE.local.md
 secrets/
 __local_tests/
+__local_scratch_tests/
 .turbo/
 tmp/
 .vscode/settings.json

@@ -1,35 +1,51 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createModule } from '../modules/moduleFactory.js';
 import { Service } from '../services/service.js';
-import { createService } from '../services/serviceFactory.js';
+import type { ServiceDescriptor } from '../services/types.js';
+import type {
+  ActionsOf,
+  ActionsOfWithFallback,
+  EventsOf,
+  EventsOfWithFallback,
+  StateOf,
+  StateOfWithFallback,
+} from '../services/internal/types.js';
 
 // ---------------------------------------------------------------------------
-// Shared test descriptors
+// Shared descriptors
 // ---------------------------------------------------------------------------
 
-type ICounter = {
+type ICounter = ServiceDescriptor<{
   state: { count: number };
   events: { changed: () => void };
   actions: { increment(): void; add(n: number): number };
-};
+}>;
 
-type IStateless = {
+type IStateless = ServiceDescriptor<{
   actions: { ping(): string };
-};
+}>;
 
-class CounterService extends Service<ICounter> {
+type IEventOnly = ServiceDescriptor<{
+  events: { tick: () => void };
+}>;
+
+type IActionOnly = ServiceDescriptor<{
+  actions: { noop(): void };
+}>;
+
+// ---------------------------------------------------------------------------
+// Shared service implementations
+// ---------------------------------------------------------------------------
+
+class CounterService extends Service<ICounter> implements ICounter {
   constructor() {
-    super({ count: 0 }, { name: 'counter' });
-    this.actions.setHandler(this);
+    super('counter', { count: 0 });
   }
-
   increment() {
     this.state.update((s) => {
       s.count += 1;
     });
     this.events.emit('changed');
   }
-
   add(n: number) {
     this.state.update((s) => {
       s.count += n;
@@ -38,10 +54,12 @@ class CounterService extends Service<ICounter> {
   }
 }
 
-class StatelessService extends Service<IStateless> {
+class StatelessService extends Service<IStateless> implements IStateless {
   constructor() {
-    super(undefined);
-    this.actions.setHandler('ping', () => 'pong');
+    super('stateless', undefined);
+  }
+  ping(): string {
+    return 'pong';
   }
 }
 
@@ -52,386 +70,203 @@ class StatelessService extends Service<IStateless> {
 // ---------------------------------------------------------------------------
 
 describe('Service', () => {
-  //-------------------------------------------------------
-  //-- construction
-  //-------------------------------------------------------
-
+  // -------------------------------------------------------------------------
+  // construction
+  // -------------------------------------------------------------------------
   describe('construction', () => {
     it('stores the name', () => {
-      const s = new CounterService();
-      expect(s.name).toBe('counter');
+      expect(new CounterService().name).toBe('counter');
+    });
+
+    it('allows undefined name', () => {
+      class AnonService extends Service<IActionOnly> implements IActionOnly {
+        constructor() {
+          super(undefined);
+        }
+        noop() {}
+      }
+      expect(new AnonService().name).toBeUndefined();
     });
 
     it('initializes state with the given value', () => {
-      const s = new CounterService();
-      expect(s.state.get().count).toBe(0);
+      expect(new CounterService().state.get().count).toBe(0);
     });
 
-    it('supports undefined state when no state in descriptor', () => {
-      const s = new StatelessService();
-      expect(s.state.get()).toBeUndefined();
-    });
-
-    it('expose invoke as shorthand for the action client', () => {
-      const s = new CounterService();
-      expect(s.invoke).toBe(s.actions.invoke);
+    it('state.get() returns undefined when no state is declared', () => {
+      expect(new StatelessService().state.get()).toBeUndefined();
     });
   });
 
-  //-------------------------------------------------------
-  //-- client
-  //-------------------------------------------------------
-
-  describe('client', () => {
-    it('client with state, events, and actions', () => {
-      const client = new CounterService().client;
-      expect(client.state).toBeDefined();
-      expect(client.events).toBeDefined();
-      expect(client.actions).toBeDefined();
+  // -------------------------------------------------------------------------
+  // state (direct on service)
+  // -------------------------------------------------------------------------
+  describe('state', () => {
+    it('update() via immer recipe changes state', () => {
+      const s = new CounterService();
+      s.state.update((d) => {
+        d.count = 5;
+      });
+      expect(s.state.get().count).toBe(5);
     });
 
-    it('client state reflects service state updates', () => {
+    it('subscribe() fires immediately with current state', () => {
       const s = new CounterService();
-      const client = s.client;
+      const fn = vi.fn();
+      s.state.subscribe(fn);
+      expect(fn).toHaveBeenCalledWith({ count: 0 }, undefined);
+    });
+
+    it('subscribe() fires again on each update', () => {
+      const s = new CounterService();
+      const fn = vi.fn();
+      s.state.subscribe(fn);
+      fn.mockClear();
+      s.increment();
+      expect(fn).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // events (direct on service)
+  // -------------------------------------------------------------------------
+  describe('events', () => {
+    it('on() receives emissions from the same service', () => {
+      const s = new CounterService();
+      const fn = vi.fn();
+      s.events.on('changed', fn);
+      s.increment();
+      expect(fn).toHaveBeenCalledTimes(1);
+    });
+
+    it('off() removes the listener', () => {
+      const s = new CounterService();
+      const fn = vi.fn();
+      s.events.on('changed', fn);
+      s.events.off('changed', fn);
+      s.increment();
+      expect(fn).not.toHaveBeenCalled();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // actions.invoke (this.actions inside the service)
+  // -------------------------------------------------------------------------
+  describe('actions.invoke', () => {
+    it('dispatches to this (the service instance)', () => {
+      const s = new CounterService();
+      s.actions.invoke.increment();
+      expect(s.state.get().count).toBe(1);
+    });
+
+    it('return values propagate back', () => {
+      const s = new CounterService();
+      expect(s.actions.invoke.add(7)).toBe(7);
+    });
+
+    it('accumulates across multiple invocations', () => {
+      const s = new CounterService();
+      s.actions.invoke.increment();
+      s.actions.invoke.increment();
+      expect(s.state.get().count).toBe(2);
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // client
+  // -------------------------------------------------------------------------
+  describe('client', () => {
+    it('client.name mirrors service name', () => {
+      expect(new CounterService().client.name).toBe('counter');
+    });
+
+    it('client.state.get() reflects current service state', () => {
+      const s = new CounterService();
       s.state.update((d) => {
         d.count = 42;
       });
-      expect(client.state.get().count).toBe(42);
+      expect(s.client.state.get().count).toBe(42);
     });
 
-    it('client can subscribe to state changes', () => {
+    it('client.state.subscribe() fires when service state changes', () => {
       const s = new CounterService();
-      const client = s.client;
-      const listener = vi.fn();
-      client.state.subscribe(listener);
-      s.invoke.increment();
-      // subscribe fires immediately (initial state), then again on each update
-      // listener receives (newState, prevState)
-      expect(listener).toHaveBeenLastCalledWith(
-        expect.objectContaining({ count: 1 }),
-        expect.anything(),
-      );
+      const fn = vi.fn();
+      s.client.state.subscribe(fn);
+      fn.mockClear();
+      s.actions.invoke.increment();
+      expect(fn).toHaveBeenCalledWith({ count: 1 }, { count: 0 });
     });
 
-    it('client receives events emitted by the service', () => {
+    it('client.events.on() receives emissions from the service', () => {
       const s = new CounterService();
-      const client = s.client;
-      const listener = vi.fn();
-      client.events.on('changed', listener);
-      s.invoke.increment();
-      expect(listener).toHaveBeenCalledTimes(1);
+      const fn = vi.fn();
+      s.client.events.on('changed', fn);
+      s.actions.invoke.increment();
+      expect(fn).toHaveBeenCalledTimes(1);
     });
 
-    it('client can invoke actions', () => {
+    it('client.actions dispatches to service handler', () => {
       const s = new CounterService();
-      const client = s.client;
-      client.actions.invoke.increment();
+      s.client.actions.increment();
       expect(s.state.get().count).toBe(1);
     });
 
-    it('client action return values are preserved', () => {
+    it('client.actions return values are preserved', () => {
       const s = new CounterService();
-      const client = s.client;
-      const result = client.actions.invoke.add(5);
-      expect(result).toBe(5);
+      expect(s.client.actions.add(5)).toBe(5);
     });
 
-    it('client.invoke is shorthand for client.actions.invoke', () => {
-      const s = new CounterService();
-      const client = s.client;
-      client.invoke.increment();
-      expect(s.state.get().count).toBe(1);
+    it('client.state.get() is undefined for no-state service', () => {
+      expect(new StatelessService().client.state.get()).toBeUndefined();
     });
   });
 
-  //-------------------------------------------------------
-  //-- this.invoke inside the service
-  //-------------------------------------------------------
-
-  describe('this.invoke', () => {
-    it('calls through to registered handlers', () => {
-      const s = new CounterService();
-      s.invoke.increment();
-      expect(s.state.get().count).toBe(1);
-    });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// createService
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-
-describe('createService()', () => {
-  //-------------------------------------------------------
-  //-- construction
-  //-------------------------------------------------------
-
-  describe('construction', () => {
-    it('stores the name', () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      expect(s.name).toBe('Counter');
+  // -------------------------------------------------------------------------
+  // type extractors (compile-time assertions; runtime anchors only)
+  // -------------------------------------------------------------------------
+  describe('type extractors', () => {
+    it('ActionsOf<ICounter> is the actions map', () => {
+      const _: ActionsOf<ICounter> = { increment: () => {}, add: () => 0 };
+      expect(_).toBeDefined();
     });
 
-    it('initializes state with the given value', () => {
-      const s = createService<ICounter>({ count: 7 }, { name: 'Counter' });
-      expect(s.state.get().count).toBe(7);
+    it('StateOf<ICounter> is the state shape', () => {
+      const _: StateOf<ICounter> = { count: 0 };
+      expect(_).toBeDefined();
     });
 
-    it('supports undefined state when no state in descriptor', () => {
-      const s = createService<IStateless>(undefined);
-      expect(s.state.get()).toBeUndefined();
-    });
- 
-    it('client returns a client with state, events, and actions', () => {
-      const client = createService<ICounter>({ count: 0 }, { name: 'Counter' }).client;
-      expect(client.state).toBeDefined();
-      expect(client.events).toBeDefined();
-      expect(client.actions).toBeDefined();
+    it('EventsOf<ICounter> is the events map', () => {
+      const _: EventsOf<ICounter> = { changed: () => {} };
+      expect(_).toBeDefined();
     });
 
-    it('actions and events work the same as OOP style', () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const listener = vi.fn();
-      s.actions.setHandler('increment', () => {
-        s.state.update((d) => {
-          d.count += 1;
-        });
-        s.events.emit('changed');
-      });
-      s.client.events.on('changed', listener);
-      s.invoke.increment();
-      expect(s.state.get().count).toBe(1);
-      expect(listener).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  //-------------------------------------------------------
-  //-- lifecycle callbacks
-  //-------------------------------------------------------
-  // type ModuleDescriptor = {
-  //   s: ICounter;
-  // };
-
-  describe('lifecycle callbacks', () => {
-    it('onInit is called during module.start()', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const onInit = vi.fn();
-      s.onServiceInit = onInit;
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(onInit).toHaveBeenCalledTimes(1);
+    it('ActionsOf returns undefined for a descriptor with no actions', () => {
+      const _: ActionsOf<IEventOnly> = undefined;
+      expect(_).toBeUndefined();
     });
 
-    it('onStart is called during module.start()', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const onStart = vi.fn();
-      s.onServiceStart = onStart;
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(onStart).toHaveBeenCalledTimes(1);
+    it('StateOf returns undefined for a descriptor with no state', () => {
+      const _: StateOf<IStateless> = undefined;
+      expect(_).toBeUndefined();
     });
 
-    it('onAfterStart is called during module.start()', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const onAfterStart = vi.fn();
-      s.onServiceAfterStart = onAfterStart;
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(onAfterStart).toHaveBeenCalledTimes(1);
+    it('EventsOf returns undefined for a descriptor with no events', () => {
+      const _: EventsOf<IStateless> = undefined;
+      expect(_).toBeUndefined();
     });
 
-    it('onBeforeStop is called during module.stop()', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const onBeforeStop = vi.fn();
-      s.onServiceBeforeStop = onBeforeStop;
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      app.stop();
-      await app.waitForStop();
-      expect(onBeforeStop).toHaveBeenCalledTimes(1);
+    it('ActionsOfWithFallback returns Empty ({}) for a descriptor with no actions', () => {
+      const _: ActionsOfWithFallback<IEventOnly> = {};
+      expect(_).toBeDefined();
     });
 
-    it('onStop is called during module.stop()', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const onStop = vi.fn();
-      s.onServiceStop = onStop;
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      app.stop();
-      await app.waitForStop();
-      expect(onStop).toHaveBeenCalledTimes(1);
+    it('StateOfWithFallback is undefined (no lie) for a descriptor with no state', () => {
+      const _: StateOfWithFallback<IStateless> = undefined;
+      expect(_).toBeUndefined();
     });
 
-    it('all five callbacks fire in correct phase order', async () => {
-      const calls: string[] = [];
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      s.onServiceInit = () => {
-        calls.push('init');
-      };
-      s.onServiceStart = () => {
-        calls.push('start');
-      };
-      s.onServiceAfterStart = () => {
-        calls.push('afterStart');
-      };
-      s.onServiceBeforeStop = () => {
-        calls.push('beforeStop');
-      };
-      s.onServiceStop = () => {
-        calls.push('stop');
-      };
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      app.stop();
-      await app.waitForStop();
-      expect(calls).toEqual(['init', 'start', 'afterStart', 'beforeStop', 'stop']);
-    });
-
-    it('async callbacks are awaited before the next phase', async () => {
-      const calls: string[] = [];
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      s.onServiceInit = async () => {
-        await Promise.resolve();
-        calls.push('init');
-      };
-      s.onServiceStart = () => {
-        calls.push('start');
-      };
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(calls).toEqual(['init', 'start']);
-    });
-
-    it('unassigned callbacks are no-ops — no throw', async () => {
-      const s = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      const app = createModule({ s });
-      app.start();
-      await expect(app.waitForStart()).resolves.toBeUndefined();
-    });
-  });
-
-  //-------------------------------------------------------
-  //-- getModule
-  //-------------------------------------------------------
-
-  describe('getModule', () => {
-    it('throws before onServiceStart', () => {
-      class S extends Service<ICounter> {
-        constructor() {
-          super({ count: 0 }, { name: 's' });
-        }
-        override onServiceInit() {
-          expect(() => this.getModule()).toThrow('onServiceStart');
-        }
-      }
-      const s = new S();
-      const app = createModule({ s });
-      app.start();
-      return app.waitForStart();
-    });
-
-    it('returns module client from onServiceStart onward', async () => {
-      let mod: unknown;
-      class S extends Service<ICounter> {
-        constructor() {
-          super({ count: 0 }, { name: 'counter' });
-        }
-        override onServiceStart() {
-          mod = this.getModule();
-        }
-      }
-      const s = new S();
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(mod).toBeDefined();
-    });
-
-    it('returned client has access to sibling services', async () => {
-      type AppModule = { a: Service<ICounter>; b: Service<ICounter> };
-      let siblingState: unknown;
-      class A extends Service<ICounter> {
-        constructor() {
-          super({ count: 42 }, { name: 'counter' });
-        }
-      }
-      class B extends Service<ICounter> {
-        constructor() {
-          super({ count: 0 }, { name: 'counter' });
-        }
-        override onServiceStart() {
-          siblingState = this.getModule<AppModule>().services.a.state.get();
-        }
-      }
-      const app = createModule({ a: new A(), b: new B() });
-      app.start();
-      await app.waitForStart();
-      expect(siblingState).toEqual({ count: 42 });
-    });
-
-    it('module client is the same instance as module.client', async () => {
-      let mod: unknown;
-      class S extends Service<ICounter> {
-        constructor() {
-          super({ count: 0 });
-        }
-        override onServiceStart() {
-          mod = this.getModule();
-        }
-      }
-      const s = new S();
-      const app = createModule({ s });
-      app.start();
-      await app.waitForStart();
-      expect(mod).toBe(app.client);
-    });
-  });
-
-  //-------------------------------------------------------
-  //-- interop with OOP services
-  //-------------------------------------------------------
-
-  describe('interop', () => {
-    it('works alongside OOP services in the same Module', async () => {
-      const calls: string[] = [];
-
-      class OopCounter extends Service<ICounter> {
-        constructor() {
-          super({ count: 0 }, { name: 'oop' });
-        }
-        onServiceInit() {
-          calls.push('oop:init');
-        }
-        onServiceStart() {
-          calls.push('oop:start');
-        }
-      }
-
-      const composed = createService<ICounter>({ count: 0 }, { name: 'Counter' });
-      composed.onServiceInit = () => {
-        calls.push('composed:init');
-      };
-      composed.onServiceStart = () => {
-        calls.push('composed:start');
-      };
-
-      const app = createModule<{ oop: Service<ICounter>; composed: Service<ICounter> }>({
-        oop: new OopCounter(),
-        composed,
-      });
-      app.start();
-      await app.waitForStart();
-
-      expect(calls).toEqual(['oop:init', 'composed:init', 'oop:start', 'composed:start']);
+    it('EventsOfWithFallback returns Empty ({}) for a descriptor with no events', () => {
+      const _: EventsOfWithFallback<IActionOnly> = {};
+      expect(_).toBeDefined();
     });
   });
 });

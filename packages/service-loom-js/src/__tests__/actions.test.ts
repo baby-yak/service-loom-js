@@ -232,27 +232,27 @@ describe('ActionsExecuter', () => {
     it('client that invokes registered handlers', () => {
       const a = new ActionExecuter<TestActions>();
       a.setHandler('add', (x, y) => x + y);
-      const client = a.client;
-      expect(client.invoke.add(3, 4)).toBe(7);
+      const invoke = a.invoke;
+      expect(invoke.add(3, 4)).toBe(7);
     });
 
-    it('client reflects handlers registered with client', () => {
+    it('client reflects handlers registered after client is obtained', () => {
       const a = new ActionExecuter<TestActions>();
-      const client = a.client;
+      const invoke = a.invoke;
       a.setHandler('greet', (name) => `hello ${name}`);
-      expect(client.invoke.greet('late')).toBe('hello late');
+      expect(invoke.greet('late')).toBe('hello late');
     });
 
     it('multiple clients share the same handler state', () => {
       const a = new ActionExecuter<TestActions>();
-      const c1 = a.client;
-      const c2 = a.client;
+      const c1 = a.invoke;
+      const c2 = a.invoke;
       a.setHandler('noop', vi.fn());
       expect(() => {
-        c1.invoke.noop();
+        c1.noop();
       }).not.toThrow();
       expect(() => {
-        c2.invoke.noop();
+        c2.noop();
       }).not.toThrow();
     });
   });

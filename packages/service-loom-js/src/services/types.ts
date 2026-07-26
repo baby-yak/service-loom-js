@@ -1,40 +1,31 @@
-import type { ActionMap } from '../actions/index.js';
-import type { EMPTY } from '../core/types.js';
-import type { EventMap } from '../events/index.js';
+import type { _ACTIONS_, _EVENTS_, _SHAPE_, _STATE_ } from '../core/internal/symbols.js';
+import type { OrUnknown } from '../core/internal/types.js';
+import type { Empty } from '../core/types.js';
+import type { ActionsOf, ServiceShape } from './internal/types.js';
+import type { RemoteService } from './remoteService.js';
+import type { Service } from './service.js';
 
-/**
- * Describes the shape of a service — its state type, event map, and action map.
- *
- * Pass this as the type parameter to `Service<Desc>` to get full type inference
- * on `state`, `events`, and `actions`.
- *
- * @example
- * type IServer = {
- *   state: { address: string };
- *   events: { connected: () => void };
- *   actions: { connect(port: number): void };
- * };
- * class ServerService extends Service<IServer> { ... }
- */
-export type ServiceDescriptor = {
-  state?: any;
-  events?: EventMap;
-  actions?: ActionMap;
-};
+//-------------------------------------------------------
+//-- service defs
+//-------------------------------------------------------
 
-export type DefaultServiceDescriptor = {
-  state: undefined;
-  events: EMPTY;
-  actions: EMPTY;
-};
+export type AnyService = Service<any> | RemoteService<any>;
 
-// Extract each field from a ServiceDescriptor, with sensible defaults
-export type DescState<SD extends ServiceDescriptor> = SD['state'];
+// the single service contract: actions + shape.
+// the `extends undefined ? unknown` guard stops `& Actions` from collapsing to
+// `never` when actions are opted out (`unknown` is the identity for `&`).
+export type ServiceDescriptor<Shape extends ServiceShape = Empty> =
+  //
+  OrUnknown<Shape['actions']> & {
+    [_SHAPE_]?: Shape | undefined;
+    [_ACTIONS_]?: Shape['actions'] | undefined;
+    [_STATE_]?: Shape['state'] | undefined;
+    [_EVENTS_]?: Shape['events'] | undefined;
+  };
 
-export type DescEvents<SD extends ServiceDescriptor> = SD['events'] extends EventMap
-  ? SD['events']
-  : EMPTY;
-
-export type DescActions<SD extends ServiceDescriptor> = SD['actions'] extends ActionMap
-  ? SD['actions']
-  : EMPTY;
+export type ValidConcreteService<S extends AnyService> =
+  S extends Service<infer D extends ServiceDescriptor<any>, any>
+    ? // for local service - enforce implementing the actions directly
+      S & OrUnknown<ActionsOf<D>>
+    : // for remote service - no enforcement
+      S;

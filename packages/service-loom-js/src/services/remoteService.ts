@@ -1,14 +1,10 @@
 import { ActionExecuter } from '../actions/actionExecuter.js';
-import { _BRAND_SERVICE_, _BRAND_SERVICE_CLIENT_, _DEPENDENCIES_ } from '../core/internal/symbols.js';
-import type { Empty } from '../core/types.js';
+import { _BRAND_REMOTE_SERVICE_, _BRAND_REMOTE_SERVICE_CLIENT } from '../core/internal/symbols.js';
 import { EventEmitter } from '../events/eventEmitter.js';
-import type { Module } from '../modules/module.js';
-import type { ModuleClients, ModuleDescriptor } from '../modules/types.js';
 import { ReactiveState } from '../reactiveState/reactiveState.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {
-  ActionsClientOf,
   ActionsOfWithFallback,
   EventsOfWithFallback,
   StateArgs,
@@ -17,14 +13,8 @@ import type {
 import type { ServiceDescriptor } from './types.js';
 
 //-------------------------------------------------------
-//-- helper types
+//-- client
 //-------------------------------------------------------
-
-type DepsFrom<T extends ModuleDescriptor | Module<any>> = T extends ModuleDescriptor
-  ? T
-  : T extends Module<infer D extends ModuleDescriptor>
-    ? D
-    : never;
 
 type Providers<Descriptor extends ServiceDescriptor<any>> = {
   actions: ActionExecuter<ActionsOfWithFallback<Descriptor>>;
@@ -36,26 +26,22 @@ type Providers<Descriptor extends ServiceDescriptor<any>> = {
 //-- client
 //-------------------------------------------------------
 
-export class ServiceClient<Descriptor extends ServiceDescriptor<any>> extends ServiceClientBase<
-  Providers<Descriptor>
-> {
-  readonly [_BRAND_SERVICE_CLIENT_] = true;
+export class RemoteServiceClient<
+  Descriptor extends ServiceDescriptor<any>,
+> extends ServiceClientBase<Providers<Descriptor>> {
+  readonly [_BRAND_REMOTE_SERVICE_CLIENT] = true;
 }
 
 //-------------------------------------------------------
 //-- service
 //-------------------------------------------------------
 
-export abstract class Service<
-  Descriptor extends ServiceDescriptor<any>,
-  Deps extends ModuleDescriptor | Module<any> = Empty,
-> extends ServiceBase<Descriptor, Providers<Descriptor>, ServiceClient<Descriptor>> {
-  readonly [_BRAND_SERVICE_] = true;
-
-  [_DEPENDENCIES_]: ModuleClients<DepsFrom<Deps>> | undefined;
-
-  /** shorthand for `this.actions.invoke` . i.e this.actions.invoke.foo() === this.invoke.foo()  */
-  readonly invoke: ActionsClientOf<Providers<Descriptor>>;
+export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> extends ServiceBase<
+  Descriptor,
+  Providers<Descriptor>,
+  RemoteServiceClient<Descriptor>
+> {
+  readonly [_BRAND_REMOTE_SERVICE_] = true;
 
   constructor(name: string | undefined, ...args: StateArgs<StateOfWithFallback<Descriptor>>) {
     const initialState = args[0] as StateOfWithFallback<Descriptor>;
@@ -64,7 +50,7 @@ export abstract class Service<
     const state = new ReactiveState<StateOfWithFallback<Descriptor>>(initialState);
     const events = new EventEmitter<EventsOfWithFallback<Descriptor>>();
 
-    const client = new ServiceClient<Descriptor>(
+    const client = new RemoteServiceClient<Descriptor>(
       name, //
       actions.invoke,
       state.client,
@@ -74,17 +60,5 @@ export abstract class Service<
     super(name, actions, state, events, client);
 
     this.actions.setHandler(this as any as ActionsOfWithFallback<Descriptor>);
-    this.invoke = this.actions.invoke;
-  }
-
-  protected getModule(): ModuleClients<DepsFrom<Deps>> {
-    const deps = this[_DEPENDENCIES_];
-    if (deps == null) {
-      throw new Error(
-        `[${this.name}]:getModule() - dependencies are not available.` +
-          `They are only available from onServiceStart() and until onServiceBeforeStop()`,
-      );
-    }
-    return deps;
   }
 }

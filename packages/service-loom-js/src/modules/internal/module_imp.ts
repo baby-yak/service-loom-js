@@ -1,182 +1,84 @@
-import type { UnsubscribeFn } from '../../core/types.js';
-import { EventEmitter } from '../../events/eventEmitter.js';
-import type { EventClient } from '../../events/index.js';
-import type { ReactiveStateClient } from '../../reactiveState/index.js';
-import { ReactiveState } from '../../reactiveState/reactiveState.js';
-import { _SERVICE_LIFECYCLE_ } from '../../services/internal/types.js';
-import type { Service } from '../../services/service.js';
+import { _DEPENDENCIES_ } from '../../core/internal/symbols.js';
+import { Service } from '../../services/service.js';
+import type { AnyService } from '../../services/types.js';
 import { createDebugLogger } from '../../utils/debugLogger.js';
 import { AsyncMutex } from '../../utils/mutex.js';
 import type { Module } from '../module.js';
-import type { ModuleClient } from '../moduleClient.js';
-import type {
-  ModuleDescriptor,
-  ModuleEvents,
-  ModuleParams,
-  ModuleServiceClients,
-  ModuleState,
-} from '../types.js';
-import { ModuleClient_imp } from './moduleClient_imp.js';
+import type { ModuleClients, ModuleDescriptor, ModuleParams } from '../types.js';
+import { getLongestName } from './utils.js';
 
 export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
-  private params: Required<ModuleParams>;
-  private servicesImplementors: M;
+  readonly name: string;
 
-  private longestServiceName = 0;
+  private _params: Required<ModuleParams>;
+  private _servicesImplementors: M;
+
+  private _isStarted = false;
   private _lock = new AsyncMutex();
 
+  private _longestServiceName = 0;
   private _debugLogger: Console;
-
-  readonly name: string;
 
   /**
    * Typed client facades for each service, keyed by the same names as the constructor input.
    * Use these to interact with services from outside the module.
    */
-  readonly services: ModuleServiceClients<M>;
+  readonly services: ModuleClients<M>;
 
-  readonly client: ModuleClient<M>;
-
-  private _state: ReactiveState<ModuleState>;
-  private _events: EventEmitter<ModuleEvents>;
-
-  readonly state: ReactiveStateClient<ModuleState>;
-  readonly events: EventClient<ModuleEvents>;
+  //-------------------------------------------------------
 
   constructor(services: M, params?: ModuleParams) {
-    this.params = {
+    this._params = {
       ...{
         name: 'untitled',
         verbose: false,
       },
       ...params,
     };
+    this.name = this._params.name;
+    this._servicesImplementors = services;
 
-    this.name = params?.name ?? 'untitled';
-
-    this._debugLogger = createDebugLogger(this.params.verbose);
-
-    this.servicesImplementors = services;
-    this._state = new ReactiveState<ModuleState>({ isStarted: false });
-    this._events = new EventEmitter<ModuleEvents>();
-
-    // default module error listeners:
-    this._events.setDefaultHandler('errorStarting', (err) =>
-      console.error('[module] unhandled start error:', err),
-    );
-    this._events.setDefaultHandler('errorStopping', (err) =>
-      console.error('[module] unhandled stop error:', err),
-    );
-
-    this.state = this._state.client;
-    this.events = this._events.client;
+    this._debugLogger = createDebugLogger(this._params.verbose);
 
     // services -> service clients
-    const clientsEntries = Object.entries(services).map(([key, service]) => [key, service.client]);
+    this.services = Object.fromEntries(
+      Object.entries(services).map(([key, service]) => [key, service.client]),
+    ) as ModuleClients<M>;
 
-    this.services = Object.fromEntries(clientsEntries) as ModuleServiceClients<M>;
-
-    //calc longestServiceName
-    this.longestServiceName = Object.values(this.servicesImplementors).reduce(
-      (prev, x) => Math.max(prev, x.name.length),
-      0,
-    );
-
-    //after self was created fully !
-    this.client = new ModuleClient_imp(this);
+    //calc longestServiceName for logging padding
+    this._longestServiceName = getLongestName(services);
   }
+
+  //-------------------------------------------------------
 
   /** Start all services in sequence: `onServiceInit` → `onServiceStart` → `onServiceAfterStart`. */
-  start() {
-    this._lock
-      .doLocked(async () => {
-        if (this._state.get().isStarted) {
-          return;
-        }
-        this._debugLogger.log(`module initialization...`);
-        await this.doAll(async (s) => s.onServiceInit(), 'init');
-        await this.doAll((s) => {
-          // set self as module in all services
-          s[_SERVICE_LIFECYCLE_].setModule(this.client);
-        }, undefined);
-        await this.doAll(async (s) => s.onServiceStart(), 'start');
-        await this.doAll(async (s) => s.onServiceAfterStart(), 'after-start');
-      })
-      .then(() => {
-        this._debugLogger.log(`module initialization complete`);
-        this._state.update({ isStarted: true });
-        this._events.emit('started');
-      })
-      .catch((err: unknown) => {
-        const error = err instanceof Error ? err : new Error('error starting services');
-        this._events.emit('errorStarting', error);
-      });
-  }
-
-  /** Stop all services in sequence: `onServiceBeforeStop` → `onServiceStop`. */
-  stop() {
-    this._lock
-      .doLocked(async () => {
-        if (!this._state.get().isStarted) {
-          return;
-        }
-        this._debugLogger.log(`module teardown...`);
-        await this.doAll(async (s) => s.onServiceBeforeStop(), 'before-stop');
-        await this.doAll(async (s) => s.onServiceStop(), 'stop');
-      })
-      .then(() => {
-        this._debugLogger.log(`module teardown complete`);
-        this._state.update({ isStarted: false });
-        this._events.emit('stopped');
-      })
-      .catch((err: unknown) => {
-        const error = err instanceof Error ? err : new Error('error stopping services');
-        this._events.emit('errorStopping', error);
-      });
-  }
-
-  waitForStart() {
-    if (this.state.get().isStarted) {
-      return Promise.resolve();
-    }
-
-    return new Promise<void>((resolve, reject) => {
-      const subs: UnsubscribeFn[] = [];
-      subs.push(
-        this.events.subscribe('started', () => {
-          resolve();
-          subs.forEach((unsub) => unsub());
-        }),
-      );
-      subs.push(
-        this.events.subscribe('errorStarting', (err) => {
-          reject(err);
-          subs.forEach((unsub) => unsub());
-        }),
-      );
+  async start() {
+    await this._lock.doLocked(async () => {
+      if (this._isStarted) {
+        return;
+      }
+      this._debugLogger.log(`module initialization...`);
+      await this.runPhase('init', false, async (s) => s.onServiceInit());
+      await this.runPhase('start', true, async (s) => s.onServiceStart());
+      await this.runPhase('after-start', true, async (s) => s.onServiceAfterStart());
+      this._isStarted = true;
+      this._debugLogger.log(`module initialization complete`);
     });
   }
 
-  /** resolves on 'stopped' (or immediately if already stopped), rejects on 'error' */
-  waitForStop() {
-    if (!this.state.get().isStarted) {
-      return Promise.resolve();
-    }
+  //-------------------------------------------------------
 
-    return new Promise<void>((resolve, reject) => {
-      const subs: UnsubscribeFn[] = [];
-      subs.push(
-        this.events.subscribe('stopped', () => {
-          resolve();
-          subs.forEach((unsub) => unsub());
-        }),
-      );
-      subs.push(
-        this.events.subscribe('errorStopping', (err) => {
-          reject(err);
-          subs.forEach((unsub) => unsub());
-        }),
-      );
+  /** Stop all services in sequence: `onServiceBeforeStop` → `onServiceStop`. */
+  async stop() {
+    await this._lock.doLocked(async () => {
+      if (!this._isStarted) {
+        return;
+      }
+      this._debugLogger.log(`module teardown...`);
+      await this.runPhase('before-stop', false, async (s) => s.onServiceBeforeStop());
+      await this.runPhase('stop', true, async (s) => s.onServiceStop());
+      this._isStarted = false;
+      this._debugLogger.log(`module teardown complete`);
     });
   }
 
@@ -184,27 +86,46 @@ export class Module_Imp<M extends ModuleDescriptor> implements Module<M> {
   //-- HELPERS
   //-------------------------------------------------------
 
-  private async doAll(
-    fn: (service: Service<any>) => Promise<void> | void,
-    verboseMessage: string | undefined,
-  ) {
-    const all = this.servicesImplementors;
-    const promises: Promise<void>[] = [];
+  private createDependenciesProxy(serviceName: string) {
+    // proxy so a missing dep throws a friendly error instead of being undefined
+    return new Proxy(this.services, {
+      get(target, prop) {
+        if (!(prop in target)) {
+          throw new Error(
+            `[${serviceName}]:getModule().${String(prop)} - dependency "${String(prop)}" is missing. ` +
+              `Is it registered in the module?`,
+          );
+        }
 
-    for (const key in all) {
-      if (!Object.hasOwn(all, key)) continue;
-      const service = all[key] as Service<any>;
+        return (target as Record<PropertyKey, unknown>)[prop];
+      },
+    });
+  }
 
-      promises.push(
-        Promise.resolve(fn(service)).then(() => {
-          if (verboseMessage != null) {
-            const paddedName = service.name.padEnd(this.longestServiceName);
-            this._debugLogger.log(` > service [ ${paddedName} ] : ${verboseMessage} complete`);
-          }
-        }),
-      );
-    }
+  //-------------------------------------------------------
 
-    await Promise.all(promises);
+  private async runPhase(
+    title: string,
+    allowDependencies: boolean,
+    fn: (s: AnyService) => void | Promise<void>,
+  ): Promise<void> {
+    const all = this._servicesImplementors;
+
+    await Promise.all(
+      Object.entries(all).map(async ([key, svc]) => {
+        const name = svc.name ?? key;
+
+        // set / unset service injected dependencies
+        if (svc instanceof Service) {
+          svc[_DEPENDENCIES_] = allowDependencies ? this.createDependenciesProxy(name) : undefined;
+        }
+
+        // run phase (rejections propagate through Promise.all)
+        await fn(svc);
+
+        const paddedName = name.padEnd(this._longestServiceName);
+        this._debugLogger.log(` ✅ [${paddedName}] - ${title}`);
+      }),
+    );
   }
 }

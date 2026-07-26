@@ -1,8 +1,8 @@
 import {
   isServiceClient,
-  type ReactiveState,
   type ReactiveStateClient,
   type ServiceClient,
+  type ServiceDescriptor,
   type StateListener,
   type StateSelectFn,
 } from '@baby-yak/service-loom-js';
@@ -21,9 +21,7 @@ import { useEffect, type DependencyList } from 'react';
  * @param deps controls when the subscription is re-created — include any values the callback closes over
  */
 export function useStateEffect<S>(
-  target:
-    | ReactiveStateClient<S>
-    | ServiceClient<{ state: S }, ReactiveState<S>>,
+  target: ReactiveStateClient<S> | ServiceClient<ServiceDescriptor<{ state: S }>>,
   callback: StateListener<S>,
   deps?: DependencyList,
 ): void;
@@ -42,9 +40,7 @@ export function useStateEffect<S>(
  * @param deps controls when the subscription is re-created — include any values the callback closes over
  */
 export function useStateEffect<S, U = S>(
-  target:
-    | ReactiveStateClient<S>
-    | ServiceClient<{ state: S }, ReactiveState<S>>,
+  target: ReactiveStateClient<S> | ServiceClient<ServiceDescriptor<{ state: S }>>,
   selector: StateSelectFn<S, U>,
   callback: StateListener<U>,
   deps?: DependencyList,
@@ -55,9 +51,7 @@ export function useStateEffect<S, U = S>(
 //-------------------------------------------------------
 
 export function useStateEffect<S, U = S>(
-  a:
-    | ReactiveStateClient<S>
-    | ServiceClient<{ state: S }, ReactiveState<S>>,
+  a: ReactiveStateClient<S> | ServiceClient<ServiceDescriptor<{ state: S }>>,
   b: StateListener<S> | StateSelectFn<S, U>,
   c?: DependencyList | StateListener<U>,
   d?: DependencyList,
@@ -65,8 +59,7 @@ export function useStateEffect<S, U = S>(
   // router function to match overloaded args
   const target = a;
   let selector: StateSelectFn<S, U> | undefined = undefined;
-  let callback: StateListener<S> | StateListener<U> | undefined =
-    undefined;
+  let callback: StateListener<S> | StateListener<U> | undefined = undefined;
   let deps: DependencyList | undefined = undefined;
 
   if (c == null || Array.isArray(c)) {
@@ -85,9 +78,7 @@ export function useStateEffect<S, U = S>(
 //-------------------------------------------------------
 
 function useStateEffect_imp<S, U = S>(
-  target:
-    | ReactiveStateClient<S>
-    | ServiceClient<{ state: S }, ReactiveState<S>>,
+  target: ReactiveStateClient<S> | ServiceClient<ServiceDescriptor<{ state: S }>>,
   selector: StateSelectFn<S, U> | undefined,
   callback: StateListener<any>,
   deps?: DependencyList,

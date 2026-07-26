@@ -1,13 +1,14 @@
-import type { ModuleClient } from '@baby-yak/service-loom-js';
-import { useReactiveState } from '@baby-yak/service-loom-react';
 import classNames from 'classnames';
 import styles from './moduleView.module.css';
+import { app } from '../services/app';
+import { useReactiveState } from '@baby-yak/service-loom-react';
 
 const TAG = 'moduleView';
-type Props = { module: ModuleClient };
 
-export default function ModuleView({ module }: Props) {
-  const { isStarted } = useReactiveState(module.state);
+type Props = {};
+
+export default function ModuleView({}: Props) {
+  const isStarted = useReactiveState(app.services.app, (a) => a.started);
   return (
     <div data-component={TAG} className={classNames(styles.root)}>
       <div className={classNames(styles.indicator)} data-is-started={isStarted}></div>

@@ -1,16 +1,17 @@
 import {
   createModule,
   type Module,
-  type ModuleClient,
+  type ModuleClients,
   type ModuleDescriptor,
   type ModuleParams,
-} from "@baby-yak/service-loom-js";
-import { createContext, useContext, useEffect, useRef } from "react";
+  type ModuleServices,
+} from '@baby-yak/service-loom-js';
+import { createContext, useContext, useEffect, useRef } from 'react';
 
 export type ModuleProviderProps<M extends ModuleDescriptor> = {
   children?: React.ReactNode;
   /** Factory called once on mount to create the service instances for the module. */
-  createModule: () => M;
+  createModule: () => ModuleServices<M>;
 };
 
 /**
@@ -39,51 +40,40 @@ export type ModuleProviderProps<M extends ModuleDescriptor> = {
  * const { counter, server } = services;
  * const { isStarted } = state.get();
  */
-export function createModuleContext<M extends ModuleDescriptor>(
-  params?: ModuleParams,
-) {
-  const context = createContext<ModuleClient<any> | null>(null);
+
+export function createModuleContext<M extends ModuleDescriptor>(params?: ModuleParams) {
+  // create inside the function ! new context hierarchy and type for every module kind.
+  const context = createContext<ModuleClients<M> | null>(null);
 
   //provider component
   const ModuleProvider = (props: ModuleProviderProps<M>) => {
-    const moduleRef = useRef<
-      | {
-          module: Module<M>;
-          moduleClient: ModuleClient<M>;
-        }
-      | undefined
-    >(undefined);
+    const moduleRef = useRef<Module<M> | undefined>(undefined);
+
     if (moduleRef.current == null) {
       // lazy create once
       const module = createModule(props.createModule(), params);
-      const moduleClient = module.client;
 
-      moduleRef.current = { module, moduleClient };
+      moduleRef.current = module;
     }
 
     //start - stop
     useEffect(() => {
-      moduleRef.current?.module.start();
+      moduleRef.current?.start().catch((e: unknown) => console.error(e));
       return () => {
-        moduleRef.current?.module.stop();
+        moduleRef.current?.stop().catch((e: unknown) => console.error(e));
       };
     }, []);
 
     //the provider
-    return (
-      <context.Provider value={moduleRef.current.moduleClient}>
-        {props.children}
-      </context.Provider>
-    );
+    return <context.Provider value={moduleRef.current.services}>{props.children}</context.Provider>;
   };
 
-  const useModule = (): ModuleClient<M> => {
-    const res = useContext(context) as ModuleClient<M> | undefined;
+  const useModule = (): ModuleClients<M> => {
+    const res = useContext(context) as ModuleClients<M> | undefined;
 
     if (res == null) {
-      // throw new Error('oops');
       throw new Error(
-        "useModule was used without a matching Provider.\nDid you forget to use the <ModuleProvider> component in the tree?",
+        'useModule was used without a matching Provider.\nDid you forget to use the <ModuleProvider> component in the tree?',
       );
     }
     return res;

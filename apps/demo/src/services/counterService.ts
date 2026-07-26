@@ -1,7 +1,8 @@
-import { Service } from '@baby-yak/service-loom-js';
+import { Service, type ServiceDescriptor } from '@baby-yak/service-loom-js';
 import { delay } from '../utils';
+import type { AppDesc } from './app';
 
-export type ICounter = {
+export type ICounter = ServiceDescriptor<{
   state: {
     count: number;
     step: number;
@@ -20,14 +21,13 @@ export type ICounter = {
     start(): void;
     stop(): void;
   };
-};
+}>;
 
-export class CounterService extends Service<ICounter> {
+export class CounterService extends Service<ICounter, AppDesc> implements ICounter {
   timer: number | undefined;
 
   constructor() {
-    super({ count: 0, step: 1, running: false }, { name: 'counter' });
-    this.actions.setHandler(this);
+    super('counter', { count: 0, step: 1, running: false });
   }
   async onServiceInit() {
     await delay(1000);

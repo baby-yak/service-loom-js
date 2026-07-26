@@ -113,38 +113,6 @@ client.on('userJoined', onUserJoined);
 client.on('scoreChanged', onScoreChanged);
 ```
 
-### Listener groups
-
-A listener group lets you bulk-remove a set of listeners in one call. Call `createListenerGroup()` on the emitter or on any client to get a `{ client, detachGroup }` pair:
-
-```ts
-const group = emitter.createListenerGroup('my-component');
-
-group.client.on('userJoined', onUserJoined);
-group.client.on('scoreChanged', onScoreChanged);
-group.client.once('close', onClose);
-
-// later — removes every listener registered through this group
-group.detachGroup();
-```
-
-Pass an event name to limit removal to a single event:
-
-```ts
-group.detachGroup('userJoined'); // removes only 'userJoined' listeners from this group
-```
-
-Groups are independent — detaching one never affects listeners registered through a different group or through the emitter directly. Groups created from a client are still scoped to the root emitter.
-
-```ts
-const client = emitter.client;
-const group = client.createListenerGroup('child-group');
-
-group.client.on('userJoined', handler);
-
-group.detachGroup(); // removes handler — does not affect other listeners on client or emitter
-```
-
 ### Default handlers
 
 A default handler fires when an event is emitted but has no registered listeners. It is not counted by `listenerCount()` and does not cause `emit()` to return `true`.
@@ -168,8 +136,7 @@ emitter.setDefaultHandler('error', undefined);
 
 ```ts
 emitter.listenerCount('event'): number
-emitter.listeners('event'): Listener[]     // wrapped (once-aware)
-emitter.rawListeners('event'): Listener[]  // original functions
+emitter.listeners('event'): Listener[]
 emitter.eventNames(): string[]             // events with active listeners
 ```
 

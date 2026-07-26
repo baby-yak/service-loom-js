@@ -1,72 +1,73 @@
 # Services
 
-A typed base class for building self-contained, composable services. Each service owns its state, events, and actions — and exposes a read-only client for use by the rest of the application.
+A typed base class for building self-contained, composable services. Each service owns its state, events, and actions — and exposes a read-only client for the rest of the application.
 
-## Two ways to create a service
+## Overview
 
-Both styles produce the same `Service<D>` type and work identically with the container `Module`.
+Extend `Service<Descriptor>`, implement the action methods on the class, and override lifecycle hooks to set up and tear down the service.
 
-**OOP style**
-Extend the `Service` class and override lifecycle methods in your subclass.
-Best when you want a class-based structure with clear method boundaries.
+## Defining a descriptor
 
-**Compositional style**
-Use the factory method `createService()` to instantiate a service.
-assign lifecycle callbacks as properties.
-Best when you prefer functions over classes, or want to build services dynamically.
-
----
-
-In any on the coding styles - we first have to define the service shape [(see more bellow...)](#defining-a-service-descriptor)
+A descriptor describes the shape of a service — its state, events, and actions. Wrap the shape in `ServiceDescriptor<Shape>` and pass it as the type parameter to `Service<Descriptor>`.
 
 ```ts
-type ICounter = {
+import { Service, ServiceDescriptor } from '@baby-yak/service-loom-js';
+
+type IServer = ServiceDescriptor<{
   state: {
-    count: number;
+    address: string;
+    port: number;
   };
   events: {
-    changed: () => void;
+    connected: () => void;
+    disconnected: (reason: string) => void;
   };
+  actions: {
+    connect(port: number): Promise<void>;
+    disconnect(): void;
+  };
+}>;
+```
+
+All three fields (`state`, `events`, `actions`) are optional. Omit any you don't need:
+
+```ts
+type ILogger = ServiceDescriptor<{
+  actions: { log(message: string): void };
+  // no state, no events
+}>;
+```
+
+## Creating a service
+
+Extend `Service<Descriptor>` and `implements Descriptor` to let TypeScript enforce that every action method is present on the class.
+
+```ts
+type ICounter = ServiceDescriptor<{
+  state: { count: number };
+  events: { changed: () => void };
   actions: {
     increment(): void;
     reset(): void;
   };
-};
-```
+}>;
 
-## OOP style
-
-Extend `Service`, override lifecycle hooks and either implement action methods directly on the class, or use setHandler for each implemented action.
-
-```ts
-import { Service } from '@baby-yak/service-loom-js';
-
-class CounterService extends Service<ICounter> {
+class CounterService extends Service<ICounter> implements ICounter {
   constructor() {
-    super({ count: 0 }, { name: 'counter' });
-
-    // implement service actions (choose one option):
-
-    // # option 1: route all actions to methods
-    //   mapping action name -> method name
-    this.actions.setHandler(this);
-
-    // # option 2: use fine grain handlers
-    this.actions.setHandler("increment" , ()=>{ ... });
-    this.actions.setHandler("reset" , ()=>{ ... });
+    // first arg: name (string | undefined)
+    // second arg: initial state (required when state is declared)
+    super('counter', { count: 0 });
   }
 
-  // -- override life cycle methods if needed:
-
-  protected onServiceInit(){
-    //initialize service if needed
+  // lifecycle hooks (all optional):
+  protected onServiceInit() {
+    // standalone setup — DB connect, config load
   }
-  protected onServiceStart(){
-    //can use other services, they all have been initialized by now.
+  protected onServiceStart() {
+    // cross-service wiring — safe to call getModule() here
   }
 
-  // -- action handler methods:
-
+  // action methods — automatically wired by the base class:
   increment() {
     this.state.update((s) => {
       s.count += 1;
@@ -83,145 +84,67 @@ class CounterService extends Service<ICounter> {
 }
 ```
 
-## Compositional style
+> The `Service` base class automatically calls `this.actions.setHandler(this)` in its constructor, so you never need to wire action methods up manually.
 
-Use `createService()` to build a service without a class. Assign lifecycle callbacks as properties and register action handlers imperatively.
+### Stateless services
 
-### `createService` — call signatures
-
-```ts
-// no state — returns Service<EMPTY>
-createService()
-createService({ name: 'myService' })
-
-// infer state shape from initial value — returns Service<{ state: S }>
-createService({ count: 0 })
-createService({ count: 0 }, { name: 'counter' })
-
-// explicit descriptor — enforces full shape — returns Service<ICounter>
-createService<ICounter>({ count: 0, step: 1 })
-createService<ICounter>({ count: 0, step: 1 }, { name: 'counter' })
-```
-
-### `createRawService` — custom state provider
-
-For advanced use cases where you want to plug in a custom state implementation instead of the default `ReactiveState`:
+Omit the initial state argument when your descriptor has no `state` field:
 
 ```ts
-// infer descriptor from provider — returns RawService<{ state: InferState<SP> }, SP>
-createRawService(myProvider)
-createRawService(myProvider, { name: 'myService' })
+type ILogger = ServiceDescriptor<{
+  actions: { log(msg: string): void };
+}>;
 
-// explicit descriptor — enforces full shape
-createRawService<IServer, MyProvider>(myProvider)
-createRawService<IServer, MyProvider>(myProvider, { name: 'server' })
+class LoggerService extends Service<ILogger> implements ILogger {
+  constructor() {
+    super('logger'); // no initial state
+  }
+  log(msg: string) {
+    console.log(`[log] ${msg}`);
+  }
+}
 ```
 
----
+## State
+
+`this.state` is a `ReactiveState` scoped to this service.
 
 ```ts
-import { createService } from '@baby-yak/service-loom-js';
-
-// create the service
-const counter = createService<ICounter>({ count: 0 }, { name: 'counter' });
-
-// attach life cycle callbacks if needed
-counter.onInit = () => {
-  console.log('counter ready');
-};
-
-// attach action handlers
-counter.actions.setHandler('increment', () => {
-  counter.state.update((s) => {
-    s.count += 1;
-  });
-  counter.events.emit('changed');
-});
-
-counter.actions.setHandler('reset', (n) => {
-  counter.state.update((s) => {
-    s.count = n ?? 0;
-  });
-  counter.events.emit('changed');
-});
+this.state.update((s) => { s.address = `host:${port}`; }); // immer recipe
+this.state.update({ address: 'host:8080' });                // shallow merge
+this.state.get();                                           // read current value
 ```
 
-### Defining a service descriptor
+[→ Full state docs](./state.md)
 
-A descriptor is a plain type literal that describes the shape of the service. Pass it as the type parameter to `Service<Desc>`.
+## Events
 
-```ts
-type IServer = {
-  state: {
-    address: string;
-    port: number
-  };
-  events: {
-    connected: () => void;
-    disconnected: (reason: string) => void
-  };
-  actions: {
-    connect(port: number): Promise<void>;
-    disconnect(): void
-    createItem(item:Item): Promise<string>;
-    getItem(id:string, collection:string): Item;
-  };
-};
-
-class ServerService extends Service<IServer> { ... }
-```
-
-All three fields are optional. Omit any you don't need:
-
-```ts
-type ILogger = {
-  actions: { log(message: string): void };
-  // no state, no events
-};
-```
-
-### State
-
-`this.state` is a `ReactiveState` instance scoped to this service. Use `update()` to mutate and `get()` to read.
-
-```ts
-this.state.update((s) => {
-  s.address = `host:${port}`;
-}); // immer recipe
-this.state.update({ address: 'host:8080' }); // shallow merge
-this.state.get(); // read current value
-```
-
-### Events
-
-`this.events` is a `EventEmitter` scoped to this service. Emit internally; external consumers listen through the client.
+`this.events` is an `EventEmitter` scoped to this service. Emit internally; external consumers listen through the client.
 
 ```ts
 this.events.emit('connected');
 this.events.emit('disconnected', 'timeout');
 ```
 
-### Actions
+[→ Full events docs](./events.md)
 
-`this.actions` is an `ActionExecuter`. Register handlers using `setHandler`.
+## Actions
 
-> [!NOTE]
-> in the OOP style : use `this.___`
-> in the compositional style : use `service.___`
+`this.actions` is an `ActionExecuter`. The base class wires `this` as the default handler, so every method on the class that matches an action name is automatically callable.
+
+You can also register individual handlers — they take priority over the class methods:
 
 ```ts
-// Bulk — wire up all methods from the class instance at once
-this.actions.setHandler(this);
-
-// Individual — useful for lambdas or overriding one method
-this.actions.setHandler('connect', (port) => { ... });
+this.actions.setHandler('connect', (port) => { /* override */ });
 ```
 
-Use `this.invoke()` as shorthand for `this.commands.invoke()`:
+To invoke an action from within the service:
 
 ```ts
 this.invoke.connect(8080);
 ```
+
+[→ Full actions docs](./actions.md)
 
 ## Getting a client
 
@@ -230,71 +153,75 @@ this.invoke.connect(8080);
 ```ts
 const client = service.client;
 
-client.state.get();                         // read state
-client.state.subscribe(s => { ... });       // reactive subscription
-client.events.on('connected', () => { });   // listen to events
-client.actions.connect(8080);               // invoke actions
+client.state.get();                            // read state
+client.state.subscribe((s) => { ... });        // reactive subscription
+client.events.on('connected', () => { });      // listen to events
+client.actions.connect(8080);                  // invoke actions
 ```
 
 ---
 
 ## Lifecycle phases
 
-Both styles share the same five phases, called by `Module` in order:
+All lifecycle methods are optional. They are called by `Module` in order during `start()` and `stop()`. Within each phase all services run **in parallel**; the next phase begins only after all services complete.
 
-**Start up (`module.start()`)**
+**Start (`module.start()`)**
 
-| Method / property                       | When                                      | Intended use                                                              |
-| --------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
-| `onInit`<br>`onServiceInit`             | First, before any other service starts    | **Standalone setup**<br>DB connect, config load, internal state           |
-| `onStart`<br>`onServiceStart`           | After all services have initialized       | **Cross-service wiring**<br>listeners, state reads, action calls          |
-| `onAfterStart`<br>`onServiceAfterStart` | After all services have finished starting | **Post-start setup**<br>e.g. catch-all route after all routes are mounted |
+| Method                | When                                      | Intended use                                                              |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------- |
+| `onServiceInit`       | First, before any other service starts    | **Standalone setup** — DB connect, config load, internal state            |
+| `onServiceStart`      | After all services have initialized       | **Cross-service wiring** — listeners, state reads, action calls           |
+| `onServiceAfterStart` | After all services have finished starting | **Post-start hooks** — e.g. catch-all route after all routes are mounted  |
 
-the module reference is injected after all services finish `onInit`.  
-`getModule()` is available in `onStart` and after. accessing it before **will** throw an error!
+`getModule()` is available from `onServiceStart` onward. Calling it in the constructor or `onServiceInit` **will throw**.
 
-**Shut down (`module.stop()`)**
+**Stop (`module.stop()`)**
 
-| Method / property                       | When                                        | Intended use                                             |
-| --------------------------------------- | ------------------------------------------- | -------------------------------------------------------- |
-| `onBeforeStop`<br>`onServiceBeforeStop` | First, while all services are still running | **Cross-service ops before teardown**                    |
-| `onStop`<br>`onServiceStop`             | After all `onBeforeStop` phases complete    | **Standalone teardown**<br>close connections, unregister |
+| Method                  | When                                        | Intended use                                             |
+| ----------------------- | ------------------------------------------- | -------------------------------------------------------- |
+| `onServiceBeforeStop`   | First, while all services are still running | **Cross-service ops before teardown**                    |
+| `onServiceStop`         | After all `onServiceBeforeStop` complete    | **Standalone teardown** — close connections, unregister  |
 
-## Accessing the module — `getModule<M>()`
+## Accessing the module — `getModule()`
 
-From `onServiceStart` onward, a service can access its parent module via `getModule<M>()`. Pass the module's descriptor type to get a fully typed `ModuleClient`:
+From `onServiceStart` onward, a service can access its parent module's service client map via `getModule()`.
+
+Declare the module shape (a `ModuleDescriptor`) as the second type parameter of `Service`:
 
 ```ts
-type AppModule = {
-  server: IServer;
-  db: IDatabase;
+type App = {
+  server: Service<IServer>;
+  db: Service<IDb>;
 };
 
-class ServerService extends Service<IServer> {
-  private get module() {
-    return this.getModule<AppModule>();
-  }
-
-  onServiceStart() {
-    // read sibling state
-    const dbState = this.module.services.db.state.get();
-
-    // subscribe to module lifecycle
-    this.module.events.on('stopped', () => this.disconnect());
+class ServerService extends Service<IServer, App> {
+  protected onServiceStart() {
+    const db = this.getModule().services.db;
+    db.state.subscribe((s) => console.log('db:', s));
   }
 }
 ```
 
-`getModule()` throws if called in the constructor or `onServiceInit` — the module is not yet attached at that point. Properties that depend on it should be declared with `!`:
+Properties set from `onServiceStart` should be declared with `!`:
 
 ```ts
-class ServerService extends Service<IServer> {
-  private db!: ServiceToClient<Service<IDatabase>>; // set in onServiceStart
+class ServerService extends Service<IServer, App> {
+  private db!: App['db']['client']; // set in onServiceStart
 
-  onServiceStart() {
-    this.db = this.getModule<AppModule>().services.db;
+  protected onServiceStart() {
+    this.db = this.getModule().services.db;
   }
 }
 ```
 
-`getModule<M>()` is unguarded — TypeScript trusts you to pass the correct `M`. If the service is used in a different module, the cast will silently be wrong.
+You can also pass the module instance type directly (useful when you have the module type but not the descriptor):
+
+```ts
+declare const app: Module<App>;
+
+class ServerService extends Service<IServer, typeof app> {
+  protected onServiceStart() {
+    this.getModule().services.db.state.get();
+  }
+}
+```

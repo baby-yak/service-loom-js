@@ -24,11 +24,3 @@ export type ActionHandler<
 > = T_Map[T_Action];
 
 export type CatchAllActionHandler = (action: string, ...args: any[]) => any;
-
-//-------------------------------------------------------
-//-- main interfaces
-//-------------------------------------------------------
-
-export type Invoker<T_Map extends ActionMap = ActionMap> = {
-  [K in keyof T_Map]: T_Map[K];
-};

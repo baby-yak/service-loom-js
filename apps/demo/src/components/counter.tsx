@@ -17,12 +17,12 @@ export default function Counter({}: Props) {
   const step = useReactiveState(services.counter.state, (s) => s.step);
 
   //actions
-  const increment = services.counter.invoke.increment;
-  const decrement = services.counter.invoke.decrement;
-  const setStep = services.counter.invoke.setStep;
-  const reset = services.counter.invoke.reset;
-  const start = services.counter.invoke.start;
-  const stop = services.counter.invoke.stop;
+  const increment = services.counter.actions.increment;
+  const decrement = services.counter.actions.decrement;
+  const setStep = services.counter.actions.setStep;
+  const reset = services.counter.actions.reset;
+  const start = services.counter.actions.start;
+  const stop = services.counter.actions.stop;
 
   useEvent(services.counter.events, 'incremented', (count) => {
     refLogger.current?.log(`incremented: ${count}`);
