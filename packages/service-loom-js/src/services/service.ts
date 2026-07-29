@@ -9,6 +9,8 @@ import { EventEmitter } from '../events/eventEmitter.js';
 import type { Module } from '../modules/module.js';
 import type { ModuleClients, ModuleDescriptor } from '../modules/types.js';
 import { ReactiveState } from '../state/local/reactiveState.js';
+import { ServiceHostManager } from '../transport/internal/serviceHostManager.js';
+import type { ServiceHost } from '../transport/serviceHost.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {
@@ -56,6 +58,8 @@ export abstract class Service<
 > extends ServiceBase<Descriptor, Providers<Descriptor>, ServiceClient<Descriptor>> {
   readonly [_BRAND_SERVICE_] = true;
 
+  private hostManager: ServiceHostManager<any> | undefined;
+
   [_DEPENDENCIES_]: ModuleClients<DepsFrom<Deps>> | undefined;
 
   /** shorthand for `this.actions.invoke` . i.e this.actions.invoke.foo() === this.invoke.foo()  */
@@ -79,6 +83,14 @@ export abstract class Service<
 
     this.actions.setHandler(this as any as ActionsOfWithFallback<Descriptor>);
     this.invoke = this.actions.invoke;
+  }
+
+  public connectServiceHost(serviceId: string, host: ServiceHost<any>) {
+    this.hostManager = new ServiceHostManager(this, serviceId, host);
+  }
+  public disconnectHost() {
+    this.hostManager?.disconnect();
+    this.hostManager = undefined;
   }
 
   protected getModule(): ModuleClients<DepsFrom<Deps>> {

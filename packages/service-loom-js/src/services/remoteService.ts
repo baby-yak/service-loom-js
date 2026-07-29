@@ -1,7 +1,9 @@
 import { RemoteActionExecuter } from '../actions/index.js';
 import { _BRAND_REMOTE_SERVICE_, _BRAND_REMOTE_SERVICE_CLIENT_ } from '../core/internal/symbols.js';
 import { EventEmitter } from '../events/eventEmitter.js';
-import { ReactiveState } from '../state/local/reactiveState.js';
+import { RemoteState } from '../state/index.js';
+import { ServiceChannelManager } from '../transport/internal/serviceChannelManager.js';
+import type { ServiceChannel } from '../transport/serviceChannel.js';
 import { ServiceBase } from './internal/serviceBase.js';
 import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {
@@ -18,7 +20,7 @@ import type { ServiceDescriptor } from './types.js';
 
 type Providers<Descriptor extends ServiceDescriptor<any>> = {
   actions: RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>;
-  state: ReactiveState<StateOfWithFallback<Descriptor>>;
+  state: RemoteState<StateOfWithFallback<Descriptor>>;
   events: EventEmitter<EventsOfWithFallback<Descriptor>>;
 };
 
@@ -43,11 +45,11 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
 > {
   readonly [_BRAND_REMOTE_SERVICE_] = true;
 
-  constructor(name: string | undefined, ...args: StateArgs<StateOfWithFallback<Descriptor>>) {
-    const initialState = args[0] as StateOfWithFallback<Descriptor>;
+  private channelManager: ServiceChannelManager;
 
+  constructor(name: string, channel: ServiceChannel) {
     const actions = new RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>();
-    const state = new ReactiveState<StateOfWithFallback<Descriptor>>(initialState);
+    const state = new RemoteState<StateOfWithFallback<Descriptor>>();
     const events = new EventEmitter<EventsOfWithFallback<Descriptor>>();
 
     const client = new RemoteServiceClient<Descriptor>(
@@ -59,9 +61,10 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
 
     super(name, actions, state, events, client);
 
-    this.actions.setHandler('*', (action, ...args) => {
-      console.log(`invoked ${action} with ${args.toString()}`);
-      throw new Error(`action not implemented [${name}.${action}]`);
-    });
+    this.channelManager = new ServiceChannelManager(this, name, channel);
+  }
+
+  disconnectChannel() {
+    this.channelManager.disconnect();
   }
 }

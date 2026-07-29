@@ -1,19 +1,19 @@
 import type { UnsubscribeFn } from '../../../core/types.js';
 import type { StateListener, StateSelectFn } from '../../types.js';
-import type { ReactiveState } from '../reactiveState.js';
-import { ReactiveStateClient } from '../reactiveStateClient.js';
+import type { RemoteState } from '../remoteState.js';
+import { RemoteStateClient } from '../remoteStateClient.js';
 
-export class StateSelector_imp<S, U> extends ReactiveStateClient<U> {
-  private source: ReactiveState<S>;
+export class StateSelector_imp<S, U> extends RemoteStateClient<U> {
+  private source: RemoteState<S>;
   private fn: StateSelectFn<S, U>;
 
-  constructor(source: ReactiveState<S>, fn: StateSelectFn<S, U>) {
+  constructor(source: RemoteState<S>, fn: StateSelectFn<S, U>) {
     super();
     this.source = source;
     this.fn = fn;
   }
 
-  get<W = U>(select?: StateSelectFn<U, W>): W {
+  get<W = U>(select?: StateSelectFn<U, W>) {
     if (select) {
       // chain stored and provided select functions S=>U=>W
       const chain = (state: S) => select(this.fn(state));
@@ -24,17 +24,7 @@ export class StateSelector_imp<S, U> extends ReactiveStateClient<U> {
       return this.source.get(noChain);
     }
   }
-  getInitialState<W = U>(select?: StateSelectFn<U, W>): W {
-    if (select) {
-      // chain stored and provided select functions S=>U=>W
-      const chain = (state: S) => select(this.fn(state));
-      return this.source.getInitialState(chain);
-    } else {
-      // cast
-      const noChain = (state: S) => this.fn(state) as unknown as W;
-      return this.source.getInitialState(noChain);
-    }
-  }
+
   subscribe(listener: StateListener<U>): UnsubscribeFn {
     const INITIAL = Symbol();
     let prev: U | typeof INITIAL = INITIAL;
@@ -53,6 +43,7 @@ export class StateSelector_imp<S, U> extends ReactiveStateClient<U> {
       prev = selected;
     });
   }
+
   select<W>(selector: StateSelectFn<U, W>) {
     const fn: StateSelectFn<S, W> = (state) => {
       const sub = this.fn(state);

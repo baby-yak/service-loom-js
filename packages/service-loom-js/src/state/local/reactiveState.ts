@@ -2,16 +2,16 @@ import { enableMapSet, produce, type Draft } from 'immer';
 import type { StateProvider } from '../../core/internal/providerTypes.js';
 import { _BRAND_REACTIVE_STATE_ } from '../../core/internal/symbols.js';
 import type { StateMap } from '../index.js';
+import {
+  type StateListener,
+  type StateListenersErrorHandlingType,
+  type StateSelectFn,
+} from '../types.js';
 import { isPlainObject } from './../../utils/utils.js';
 import { StateClient_imp } from './internal/stateClient_imp.js';
 import { StateSelector_imp } from './internal/stateSelector_imp.js';
 import type { ReactiveStateClient } from './reactiveStateClient.js';
 import type { ReactiveStateSource } from './reactiveStateSource.js';
-import {
-  type StateListener,
-  type StateListenersErrorHandlingType,
-  type StateSelectFn,
-} from './types.js';
 
 //-------------------------------------------------------
 // -- enables immer Map/Set support globally — see README

@@ -16,8 +16,10 @@ import {
   _BRAND_REMOTE_ACTION_EXECUTER_,
   _BRAND_REMOTE_SERVICE_,
   _BRAND_REMOTE_SERVICE_CLIENT_,
+  _BRAND_REMOTE_STATE_,
+  _BRAND_REMOTE_STATE_CLIENT_,
   _BRAND_SERVICE_,
-  _BRAND_SERVICE_CLIENT_
+  _BRAND_SERVICE_CLIENT_,
 } from './core/internal/symbols.js';
 import type { EventClient } from './events/eventClient.js';
 import type { EventEmitter } from './events/eventEmitter.js';
@@ -25,6 +27,7 @@ import type { EventMap } from './events/types.js';
 import type { RemoteService, RemoteServiceClient } from './services/remoteService.js';
 import type { Service, ServiceClient } from './services/service.js';
 import type { ServiceDescriptor } from './services/types.js';
+import type { RemoteState, RemoteStateClient } from './state/index.js';
 import type { ReactiveState } from './state/local/reactiveState.js';
 import type { ReactiveStateClient } from './state/local/reactiveStateClient.js';
 import type { StateMap } from './state/types.js';
@@ -74,14 +77,12 @@ export function isReactiveStateClient<S extends StateMap = any>(x: unknown) {
   return is<ReactiveStateClient<S>>(x, (x) => x[_BRAND_REACTIVE_STATE_CLIENT_]);
 }
 
-// export function isRemoteState<S extends StateMap = any>(x: unknown): x is ReactiveState<S> {
-//   return is<ReactiveState<any>>(x, (x) => x[_BRAND_REMOTE_STATE_]);
-// }
-// export function isRemoteStateClient<S extends StateMap = any>(
-//   x: unknown,
-// ): x is ReactiveStateClient<S> {
-//   return is<ReactiveStateClient<any>>(x, (x) => x[_BRAND_REMOTE_STATE_CLIENT_]);
-// }
+export function isRemoteState<S extends StateMap = any>(x: unknown) {
+  return is<RemoteState<S>>(x, (x) => x[_BRAND_REMOTE_STATE_]);
+}
+export function isRemoteStateClient<S extends StateMap = any>(x: unknown) {
+  return is<RemoteStateClient<S>>(x, (x) => x[_BRAND_REMOTE_STATE_CLIENT_]);
+}
 
 //events:
 export function isEventEmitter<E extends EventMap = any>(x: unknown) {

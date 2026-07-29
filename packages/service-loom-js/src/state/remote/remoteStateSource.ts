@@ -1,12 +1,9 @@
 import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateListener, StateMap, StateSelectFn } from '../types.js';
 
-export interface ReactiveStateSource<S extends StateMap> {
+export interface RemoteStateSource<S extends StateMap> {
   /** Returns the current state (deeply readonly). */
-  get<U = S>(select?: StateSelectFn<S, U>): U;
-
-  /** Returns the initial state (deeply readonly). */
-  getInitialState<U = S>(select?: StateSelectFn<S, U>): U;
+  get<U = S>(select?: StateSelectFn<S, U>): Promise<U>;
 
   /**
    * Subscribes to state changes. The listener is called immediately with the
@@ -21,5 +18,5 @@ export interface ReactiveStateSource<S extends StateMap> {
    * value changes (compared with `Object.is`). Chained selectors are flattened
    * into a single selector for efficiency.
    */
-  select<U>(selector: StateSelectFn<S, U>): ReactiveStateSource<U>;
+  select<U>(selector: StateSelectFn<S, U>): RemoteStateSource<U>;
 }
