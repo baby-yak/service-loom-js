@@ -1,5 +1,6 @@
 import type { StateProvider } from '../../core/internal/providerTypes.js';
 import { _BRAND_REMOTE_STATE_ } from '../../core/internal/symbols.js';
+import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateMap } from '../index.js';
 import {
   type StateListener,
@@ -19,9 +20,12 @@ export type RemoteStateParams = {
 
 //-------------------------------------------------------
 //-- types
+const INITIAL = Symbol();
 
-type ListenerContainer<S> = {
-  listener: StateListener<S>;
+type ListenerContainer<S, U = S> = {
+  listener: StateListener<U>;
+  prev: typeof INITIAL | U;
+  select: StateSelectFn<S, U> | undefined;
 };
 
 const DEFAULT_OPTIONS: Required<RemoteStateParams> = {
@@ -48,7 +52,7 @@ export class RemoteState<S extends StateMap>
 {
   readonly [_BRAND_REMOTE_STATE_] = true;
 
-  private _listeners: ListenerContainer<S>[];
+  private _listeners: ListenerContainer<S, any>[];
   private _options: Required<RemoteStateParams>;
 
   /**
@@ -80,23 +84,37 @@ export class RemoteState<S extends StateMap>
     // }
   }
 
-  subscribe(listener: StateListener<S>) {
-    const safeListener: StateListener<S> = (state, prev) => {
-      try {
-        listener(state, prev);
-      } catch (error) {
-        this._handleListenerException(error);
-      }
-    };
-    const container: ListenerContainer<S> = {
-      listener: safeListener,
+  subscribe(listener: StateListener<S>): UnsubscribeFn;
+  subscribe<U>(select: StateSelectFn<S, U>, listener: StateListener<U>): UnsubscribeFn;
+  subscribe(a: unknown, b?: unknown): UnsubscribeFn {
+    if (b) {
+      const select = a as StateSelectFn<S, any>;
+      const listener = b as StateListener<any>;
+      return this._subscribe(select, listener);
+    } else {
+      const select = undefined;
+      const listener = a as StateListener<any>;
+      return this._subscribe(select, listener);
+    }
+  }
+
+  _subscribe<U = S>(select: StateSelectFn<S, U> | undefined, listener: StateListener<U>) {
+    const container: ListenerContainer<S, any> = {
+      prev: INITIAL,
+      select,
+      listener,
     };
     this._listeners.push(container);
 
-    //initial value
+    //first fire on subscribe:
     this.get()
-      .then((s) => safeListener(s, undefined))
-      .catch((err: unknown) => console.error(err));
+      .then((s) => this._notifyListener(s, container))
+      .catch((error: unknown) => {
+        console.error(
+          'Error in subscribe: getting current state for initial listener invocation.',
+          error,
+        );
+      });
 
     return () => {
       this._listeners = this._listeners.filter((x) => x !== container);
@@ -110,6 +128,22 @@ export class RemoteState<S extends StateMap>
   //-------------------------------------------------------
   //-- helpers
   //-------------------------------------------------------
+  private _notifyListener(state: S, container: ListenerContainer<S, any>) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const selected = container.select ? container.select(state) : state;
+
+      if (container.prev !== INITIAL && Object.is(container.prev, selected)) {
+        return;
+      }
+
+      container.listener(selected, container.prev === INITIAL ? undefined : container.prev);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      container.prev = selected;
+    } catch (error) {
+      this._handleListenerException(error);
+    }
+  }
 
   private _handleListenerException(err: unknown) {
     const handling = this._options.listenersErrorHandling;

@@ -8,12 +8,12 @@ export class StateClient_imp<
   U extends StateMap = S,
 > extends ReactiveStateClient<U> {
   private source: ReactiveState<S>;
-  private fn: StateSelectFn<S, U> | undefined;
+  private fn: StateSelectFn<S, U>;
 
   constructor(source: ReactiveState<S>, select?: StateSelectFn<S, U>) {
     super();
     this.source = source;
-    this.fn = select;
+    this.fn = select ?? ((s) => s as any as U);
   }
 
   get<W = U>(select?: StateSelectFn<U, W>): W {
@@ -40,34 +40,18 @@ export class StateClient_imp<
       listener = a as StateListener<any>;
     }
     const chain = this.makeChainSelect(select);
-    if (chain) {
-      return this.source.subscribe(chain, listener);
-    } else {
-      return this.source.subscribe(listener);
-    }
+    return this.source.subscribe(chain, listener);
   }
 
   select<W>(select: StateSelectFn<U, W>) {
-    const chain = this.makeChainSelect(select) ?? ((s) => s as any as W);
+    const chain = this.makeChainSelect(select);
     return this.source.select(chain);
   }
 
   //-------------------------------------------------------
 
-  private makeChainSelect<W = U>(select?: StateSelectFn<U, W>): StateSelectFn<S, W> | undefined {
-    const selfSelect = this.fn;
-    if (select) {
-      if (selfSelect) {
-        return (state: S) => select(selfSelect(state));
-      } else {
-        return select as any as StateSelectFn<S, W>;
-      }
-    } else {
-      if (selfSelect) {
-        return ((state: S) => selfSelect(state)) as any as StateSelectFn<S, W>;
-      } else {
-        return undefined;
-      }
-    }
+  private makeChainSelect<W = U>(select: StateSelectFn<U, W> | undefined): StateSelectFn<S, W> {
+    select = select ?? ((state) => state as any as W);
+    return (state: S) => select(this.fn(state));
   }
 }
