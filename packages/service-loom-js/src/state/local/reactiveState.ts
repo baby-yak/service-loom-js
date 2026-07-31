@@ -1,6 +1,7 @@
 import { enableMapSet, produce, type Draft } from 'immer';
 import type { StateProvider } from '../../core/internal/providerTypes.js';
 import { _BRAND_REACTIVE_STATE_ } from '../../core/internal/symbols.js';
+import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateMap } from '../index.js';
 import {
   type StateListener,
@@ -9,7 +10,6 @@ import {
 } from '../types.js';
 import { isPlainObject } from './../../utils/utils.js';
 import { StateClient_imp } from './internal/stateClient_imp.js';
-import { StateSelector_imp } from './internal/stateSelector_imp.js';
 import type { ReactiveStateClient } from './reactiveStateClient.js';
 import type { ReactiveStateSource } from './reactiveStateSource.js';
 
@@ -26,8 +26,12 @@ export type ReactiveStateParams = {
 //-------------------------------------------------------
 //-- types
 
-type ListenerContainer<S> = {
-  listener: StateListener<S>;
+const INITIAL = Symbol();
+
+type ListenerContainer<S, U = S> = {
+  listener: StateListener<U>;
+  prev: typeof INITIAL | U;
+  select: StateSelectFn<S, U> | undefined;
 };
 
 const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
@@ -56,7 +60,7 @@ export class ReactiveState<S extends StateMap>
 
   private _initial: S;
   private _state: S;
-  private _listeners: ListenerContainer<S>[];
+  private _listeners: ListenerContainer<S, any>[];
   private _options: Required<ReactiveStateParams>;
 
   /**
@@ -85,7 +89,7 @@ export class ReactiveState<S extends StateMap>
     this._state = state;
     const listeners = [...this._listeners];
     for (const container of listeners) {
-      container.listener(state, prev);
+      this._notifyListener(state, container);
     }
   }
 
@@ -109,20 +113,30 @@ export class ReactiveState<S extends StateMap>
     }
   }
 
-  subscribe(listener: StateListener<S>) {
-    const safeListener: StateListener<S> = (state, prev) => {
-      try {
-        listener(state, prev);
-      } catch (error) {
-        this._handleListenerException(error);
-      }
-    };
-    const container: ListenerContainer<S> = {
-      listener: safeListener,
+  subscribe(listener: StateListener<S>): UnsubscribeFn;
+  subscribe<U>(select: StateSelectFn<S, U>, listener: StateListener<U>): UnsubscribeFn;
+  subscribe(a: unknown, b?: unknown): UnsubscribeFn {
+    if (b) {
+      const select = a as StateSelectFn<S, any>;
+      const listener = b as StateListener<any>;
+      return this._subscribe(select, listener);
+    } else {
+      const select = undefined;
+      const listener = a as StateListener<any>;
+      return this._subscribe(select, listener);
+    }
+  }
+
+  _subscribe<U = S>(select: StateSelectFn<S, U> | undefined, listener: StateListener<U>) {
+    const container: ListenerContainer<S, any> = {
+      prev: INITIAL,
+      select,
+      listener,
     };
     this._listeners.push(container);
 
-    safeListener(this.get(), undefined);
+    //first fire on subscribe:
+    this._notifyListener(this.get(), container);
 
     return () => {
       this._listeners = this._listeners.filter((x) => x !== container);
@@ -130,7 +144,7 @@ export class ReactiveState<S extends StateMap>
   }
 
   select<U>(selector: StateSelectFn<S, U>) {
-    return new StateSelector_imp(this, selector);
+    return new StateClient_imp(this, selector);
   }
 
   /**
@@ -183,6 +197,22 @@ export class ReactiveState<S extends StateMap>
   //-------------------------------------------------------
   //-- helpers
   //-------------------------------------------------------
+  private _notifyListener(state: S, container: ListenerContainer<S, any>) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const selected = container.select ? container.select(state) : state;
+
+      if (container.prev !== INITIAL && Object.is(container.prev, selected)) {
+        return;
+      }
+
+      container.listener(selected, container.prev === INITIAL ? undefined : container.prev);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      container.prev = selected;
+    } catch (error) {
+      this._handleListenerException(error);
+    }
+  }
 
   private _handleListenerException(err: unknown) {
     const handling = this._options.listenersErrorHandling;

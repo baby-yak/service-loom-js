@@ -10,5 +10,6 @@ export abstract class ReactiveStateClient<S extends StateMap> implements Reactiv
   abstract get<U = S>(select?: StateSelectFn<S, U>): U;
   abstract getInitialState<U = S>(select?: StateSelectFn<S, U>): U;
   abstract subscribe(listener: StateListener<S>): UnsubscribeFn;
+  abstract subscribe<U>(select: StateSelectFn<S, U>, listener: StateListener<U>): UnsubscribeFn;
   abstract select<U>(selector: StateSelectFn<S, U>): ReactiveStateClient<U>;
 }

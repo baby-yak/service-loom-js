@@ -15,6 +15,7 @@ export interface ReactiveStateSource<S extends StateMap> {
    * @returns An {@link UnsubscribeFn} that removes the listener when called.
    */
   subscribe(listener: StateListener<S>): UnsubscribeFn;
+  subscribe<U>(select: StateSelectFn<S, U>, listener: StateListener<S>): UnsubscribeFn;
 
   /**
    * Creates a derived {@link StateClient} that emits only when the selected

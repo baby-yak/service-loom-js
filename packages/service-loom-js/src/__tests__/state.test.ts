@@ -495,5 +495,167 @@ describe('StateSelector', () => {
       });
       expect(fn).toHaveBeenCalledWith(2, 1);
     });
+
+    it('three levels of chaining', () => {
+      const s = new ReactiveState({ a: { b: { c: 1 } }, x: 0 });
+      const sel = s
+        .select((st) => st.a)
+        .select((a) => a.b)
+        .select((b) => b.c);
+      const fn = vi.fn();
+      sel.subscribe(fn);
+      fn.mockClear();
+
+      s.update((draft) => { draft.x = 99; });
+      expect(fn).not.toHaveBeenCalled();
+
+      s.update((draft) => { draft.a.b.c = 2; });
+      expect(fn).toHaveBeenCalledWith(2, 1);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// subscribe(select, listener) — inline select on subscribe
+// ---------------------------------------------------------------------------
+
+describe('subscribe with inline select', () => {
+  describe('ReactiveState.subscribe(select, listener)', () => {
+    it('fires immediately with the selected value and prev = undefined', () => {
+      const s = new ReactiveState({ x: 1, y: 2 });
+      const fn = vi.fn();
+      s.subscribe((state) => state.x, fn);
+      expect(fn).toHaveBeenCalledOnce();
+      expect(fn).toHaveBeenCalledWith(1, undefined);
+    });
+
+    it('calls listener with selected value on change', () => {
+      const s = new ReactiveState({ x: 1, y: 2 });
+      const fn = vi.fn();
+      s.subscribe((state) => state.x, fn);
+      fn.mockClear();
+
+      s.set({ x: 2, y: 2 });
+      expect(fn).toHaveBeenCalledWith(2, 1);
+    });
+
+    it('tracks prev across multiple changes', () => {
+      const s = new ReactiveState({ x: 0 });
+      const calls: [number, number | undefined][] = [];
+      s.subscribe((st) => st.x, (val, prev) => calls.push([val, prev]));
+
+      s.set({ x: 1 });
+      s.set({ x: 2 });
+      expect(calls).toEqual([[0, undefined], [1, 0], [2, 1]]);
+    });
+
+    it('skips notification when selected value is unchanged (Object.is)', () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const fn = vi.fn();
+      s.subscribe((state) => state.x, fn);
+      fn.mockClear();
+
+      s.set({ x: 1, y: 99 }); // y changed, x did not
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('handles NaN — does not fire when NaN stays NaN', () => {
+      const s = new ReactiveState({ v: NaN });
+      const fn = vi.fn();
+      s.subscribe((st) => st.v, fn);
+      fn.mockClear();
+
+      s.set({ v: NaN });
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('unsubscribe stops notifications', () => {
+      const s = new ReactiveState({ x: 1 });
+      const fn = vi.fn();
+      const unsub = s.subscribe((st) => st.x, fn);
+      fn.mockClear();
+
+      unsub();
+      s.set({ x: 2 });
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('independent of a plain subscribe on the same state', () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const plain = vi.fn();
+      const selected = vi.fn();
+
+      s.subscribe(plain);
+      s.subscribe((st) => st.x, selected);
+      plain.mockClear();
+      selected.mockClear();
+
+      s.set({ x: 1, y: 99 }); // only y changed
+      expect(plain).toHaveBeenCalledOnce();     // plain listener always fires
+      expect(selected).not.toHaveBeenCalled();  // selected x unchanged
+    });
+  });
+
+  describe('client.subscribe(select, listener)', () => {
+    it('fires immediately with selected value', () => {
+      const s = new ReactiveState({ x: 1, y: 2 });
+      const fn = vi.fn();
+      s.client.subscribe((st) => st.x, fn);
+      expect(fn).toHaveBeenCalledWith(1, undefined);
+    });
+
+    it('calls listener when selected value changes', () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const fn = vi.fn();
+      s.client.subscribe((st) => st.x, fn);
+      fn.mockClear();
+
+      s.set({ x: 2, y: 0 });
+      expect(fn).toHaveBeenCalledWith(2, 1);
+    });
+
+    it('skips when selected value unchanged', () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const fn = vi.fn();
+      s.client.subscribe((st) => st.x, fn);
+      fn.mockClear();
+
+      s.set({ x: 1, y: 99 });
+      expect(fn).not.toHaveBeenCalled();
+    });
+
+    it('unsubscribe stops notifications', () => {
+      const s = new ReactiveState({ x: 1 });
+      const fn = vi.fn();
+      const unsub = s.client.subscribe((st) => st.x, fn);
+      fn.mockClear();
+
+      unsub();
+      s.set({ x: 2 });
+      expect(fn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('select().subscribe(select, listener) — composed selects', () => {
+    it('chains the selector and the subscribe select', () => {
+      const s = new ReactiveState({ a: { b: 1 }, c: 0 });
+      const fn = vi.fn();
+      s.select((st) => st.a).subscribe((a) => a.b, fn);
+      expect(fn).toHaveBeenCalledWith(1, undefined);
+      fn.mockClear();
+
+      s.update((draft) => { draft.a.b = 2; });
+      expect(fn).toHaveBeenCalledWith(2, 1);
+    });
+
+    it('skips when the composed selected value is unchanged', () => {
+      const s = new ReactiveState({ a: { b: 1 }, c: 0 });
+      const fn = vi.fn();
+      s.select((st) => st.a).subscribe((a) => a.b, fn);
+      fn.mockClear();
+
+      s.update((draft) => { draft.c = 99; }); // neither a.b changes
+      expect(fn).not.toHaveBeenCalled();
+    });
   });
 });
