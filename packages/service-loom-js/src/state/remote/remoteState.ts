@@ -1,5 +1,5 @@
 import type { StateProvider } from '../../core/internal/providerTypes.js';
-import { _BRAND_REMOTE_STATE_ } from '../../core/internal/symbols.js';
+import { _REMOTE_STATE_, _BRANDS_ } from '../../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateMap } from '../index.js';
 import {
@@ -50,7 +50,7 @@ const DEFAULT_OPTIONS: Required<RemoteStateParams> = {
 export class RemoteState<S extends StateMap>
   implements RemoteStateSource<S>, StateProvider<RemoteStateClient<S>>
 {
-  readonly [_BRAND_REMOTE_STATE_] = true;
+  readonly [_BRANDS_] = [_REMOTE_STATE_];
 
   private _listeners: ListenerContainer<S, any>[];
   private _options: Required<RemoteStateParams>;

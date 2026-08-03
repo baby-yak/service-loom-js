@@ -1,3 +1,4 @@
+import { _BRANDS_ } from '../../core/internal/symbols.js';
 import type {
   ActionExecuterParams,
   ActionHandler,
@@ -5,17 +6,19 @@ import type {
   ActionNames,
   CatchAllActionHandler,
 } from '../types.js';
-import type { ActionClientBase } from './actionClientBase.js';
-import { ExecutionMapper } from './internal/ExecutionMapper.js';
+import { ExecutionMapper } from './executionMapper.js';
 
-export class ActionExecuterBase<T_Map extends ActionMap, T_Client extends ActionClientBase<T_Map>> {
-  private _exec: ExecutionMapper<T_Map, T_Client>;
-  readonly invoke: T_Client;
+export abstract class ActionExecuterBase<T_Map extends ActionMap> {
+  [_BRANDS_]: symbol[];
+  private _exec: ExecutionMapper<T_Map>;
+  readonly invoke: T_Map;
 
-  constructor(_params?: ActionExecuterParams, ...clientBrandProp: (string | symbol)[]) {
+  constructor(_params: ActionExecuterParams | undefined, brands: symbol[], clientBrands: symbol[]) {
     //create the invoker
-    this._exec = new ExecutionMapper<T_Map, T_Client>();
-    this.invoke = this._exec.createProxyClient(...clientBrandProp);
+    this[_BRANDS_] = brands;
+
+    this._exec = new ExecutionMapper<T_Map>();
+    this.invoke = this._exec.createProxyClient(clientBrands);
   }
 
   //-------------------------------------------------------

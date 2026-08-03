@@ -1,6 +1,6 @@
 import { enableMapSet, produce, type Draft } from 'immer';
 import type { StateProvider } from '../../core/internal/providerTypes.js';
-import { _BRAND_REACTIVE_STATE_ } from '../../core/internal/symbols.js';
+import { _REACTIVE_STATE_, _BRANDS_ } from '../../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateMap } from '../index.js';
 import {
@@ -56,7 +56,7 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
 export class ReactiveState<S extends StateMap>
   implements ReactiveStateSource<S>, StateProvider<ReactiveStateClient<S>>
 {
-  readonly [_BRAND_REACTIVE_STATE_] = true;
+  readonly [_BRANDS_] = [_REACTIVE_STATE_];
 
   private _initial: S;
   private _state: S;

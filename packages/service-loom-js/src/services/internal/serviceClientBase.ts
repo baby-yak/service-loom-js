@@ -1,4 +1,4 @@
-import { _BRAND_SERVICE_CLIENT_BASE_ } from '../../core/internal/symbols.js';
+import { _BRANDS_ } from '../../core/internal/symbols.js';
 import type {
   ActionsClientOf,
   EventsClientOf,
@@ -7,7 +7,7 @@ import type {
 } from './types.js';
 
 export class ServiceClientBase<Providers extends ServiceProvidersShape<any, any, any>> {
-  readonly [_BRAND_SERVICE_CLIENT_BASE_] = true;
+  [_BRANDS_]: symbol[];
 
   readonly name: string | undefined;
 
@@ -20,7 +20,9 @@ export class ServiceClientBase<Providers extends ServiceProvidersShape<any, any,
     actions: ActionsClientOf<Providers>,
     state: StateClientOf<Providers>,
     events: EventsClientOf<Providers>,
+    brands: symbol[],
   ) {
+    this[_BRANDS_] = brands;
     this.name = name;
     this.actions = actions;
     this.state = state;

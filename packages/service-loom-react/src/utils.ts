@@ -7,7 +7,6 @@ import {
   isReactiveStateClient,
   isService,
   isServiceClient,
-  type ActionClient,
   type ActionExecuter,
   type ActionMap,
   type EventClient,
@@ -23,21 +22,21 @@ import {
 export function extractActions<T_ActionMap extends ActionMap>(
   target:
     | ActionExecuter<T_ActionMap>
-    | ActionClient<T_ActionMap>
+    | T_ActionMap
     | Service<ServiceDescriptor<{ actions: T_ActionMap }>>
     | ServiceClient<ServiceDescriptor<{ actions: T_ActionMap }>>,
-): ActionClient<T_ActionMap> {
+): T_ActionMap {
   if (isActionExecuter(target)) {
     return target.invoke;
   }
-  if (isActionClient(target)) {
+  if (isActionClient<ActionMap>(target)) {
     return target;
   }
   if (isService<ServiceDescriptor<{ actions: T_ActionMap }>>(target)) {
-    return target.actions.invoke as ActionClient<T_ActionMap>;
+    return target.actions.invoke as T_ActionMap;
   }
   if (isServiceClient<ServiceDescriptor<{ actions: T_ActionMap }>>(target)) {
-    return target.actions as ActionClient<T_ActionMap>;
+    return target.actions as T_ActionMap;
   }
 
   throw new Error('unknown option in extractActions()');

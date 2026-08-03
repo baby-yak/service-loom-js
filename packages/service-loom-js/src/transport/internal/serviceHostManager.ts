@@ -85,6 +85,7 @@ export class ServiceHostManager<TClient> {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const fn = this.service.actions.invoke[action] as ((...args: any[]) => any) | undefined;
     if (!fn) {
       this.send(client, {

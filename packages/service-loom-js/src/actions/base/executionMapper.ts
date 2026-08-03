@@ -1,7 +1,7 @@
-import { _BRAND_ACTION_CLIENT_ } from '../../../core/internal/symbols.js';
-import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from '../../types.js';
-import type { ActionClient } from '../actionClient.js';
+import { _BRANDS_ } from '../../core/internal/symbols.js';
+import type { ActionHandler, ActionMap, ActionNames, CatchAllActionHandler } from '../types.js';
 
+// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
 export class ExecutionMapper<T_Map extends ActionMap> {
   private mapping: Map<ActionNames<T_Map>, ActionHandler<T_Map, any>> = new Map();
   private executionTarget: T_Map | undefined = undefined;
@@ -44,14 +44,15 @@ export class ExecutionMapper<T_Map extends ActionMap> {
     this.boundHandlersCache_catchAll.clear();
   }
   //proxy:
-  createProxyClient(): ActionClient<T_Map> {
-    const proxy: ActionClient<T_Map> = new Proxy(
+
+  createProxyClient(brands: symbol[]): T_Map {
+    const proxy = new Proxy(
       {},
       {
         get: (target, prop) => {
           // branding
-          if (prop === _BRAND_ACTION_CLIENT_) {
-            return true;
+          if (prop === _BRANDS_) {
+            return brands;
           }
 
           //should only be string action names
@@ -109,8 +110,8 @@ export class ExecutionMapper<T_Map extends ActionMap> {
           throw new Error(`Action [${prop}] was not implemented`);
         },
       },
-    ) as ActionClient<T_Map>;
+    );
 
-    return proxy;
+    return proxy as T_Map;
   }
 }

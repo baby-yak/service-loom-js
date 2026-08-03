@@ -1,5 +1,4 @@
 import type {
-  ActionClient,
   ActionExecuter,
   ActionMap,
   ActionNames,
@@ -23,7 +22,7 @@ import { extractActions } from '../utils.js';
 export function useAction<T_ActionMap extends ActionMap>(
   target:
     | ActionExecuter<T_ActionMap>
-    | ActionClient<T_ActionMap>
+    | T_ActionMap
     | Service<ServiceDescriptor<{ actions: T_ActionMap }>>
     | ServiceClient<ServiceDescriptor<{ actions: T_ActionMap }>>,
   action: ActionNames<T_ActionMap>,
@@ -47,7 +46,7 @@ export function useActionAsync<
   T_ActionMap extends ActionMap,
   T_Action extends ActionNames<T_ActionMap>,
 >(
-  target: ActionClient<T_ActionMap> | ServiceClient<ServiceDescriptor<{ actions: T_ActionMap }>>,
+  target: T_ActionMap | ServiceClient<ServiceDescriptor<{ actions: T_ActionMap }>>,
   action: T_Action,
 ): AsyncAction<ActionReturnType<T_ActionMap, T_Action>, ActionParams<T_ActionMap, T_Action>>;
 
@@ -63,7 +62,7 @@ export function useActionAsync<T_Res, T_Params extends any[]>(
 ): AsyncAction<T_Res, T_Params>;
 // Implementation — routes to useActionAsync_imp
 export function useActionAsync(
-  targetOrFn: ((...args: any[]) => any) | ActionClient<any> | ServiceClient<any>,
+  targetOrFn: ((...args: any[]) => any) | ServiceClient<any> | ActionMap,
   action?: string,
 ): AsyncAction<any, any[]> {
   //get the function:

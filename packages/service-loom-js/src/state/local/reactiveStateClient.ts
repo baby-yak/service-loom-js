@@ -1,11 +1,11 @@
-import { _BRAND_REACTIVE_STATE_CLIENT_ } from '../../core/internal/symbols.js';
+import { _REACTIVE_STATE_CLIENT_, _BRANDS_ } from '../../core/internal/symbols.js';
 import type { UnsubscribeFn } from '../../core/types.js';
 import type { StateListener, StateMap, StateSelectFn } from '../types.js';
 import type { ReactiveStateSource } from './reactiveStateSource.js';
 
 /** Read-only view of a reactive state container. */
 export abstract class ReactiveStateClient<S extends StateMap> implements ReactiveStateSource<S> {
-  readonly [_BRAND_REACTIVE_STATE_CLIENT_] = true;
+  readonly [_BRANDS_] = [_REACTIVE_STATE_CLIENT_];
 
   abstract get<U = S>(select?: StateSelectFn<S, U>): U;
   abstract getInitialState<U = S>(select?: StateSelectFn<S, U>): U;

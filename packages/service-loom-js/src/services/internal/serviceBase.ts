@@ -1,6 +1,6 @@
 import {
   _ACTIONS_,
-  _BRAND_SERVICE_BASE_,
+  _BRANDS_,
   _DESCRIPTOR_,
   _EVENTS_,
   _SHAPE_,
@@ -15,13 +15,13 @@ import type {
   StateProviderOf,
 } from './types.js';
 
-export abstract class   ServiceBase<
+export abstract class ServiceBase<
   Descriptor extends ServiceDescriptor<any>,
   Providers extends ServiceProvidersShape<any, any, any>,
   Client extends ServiceClientBase<Providers>,
 > {
   // brand
-  readonly [_BRAND_SERVICE_BASE_] = true;
+  [_BRANDS_]: symbol[];
 
   // define the Shape's vars so the contract is filled (auto generate will not try to make these on child classed)
   [_DESCRIPTOR_]?: Descriptor = undefined;
@@ -45,7 +45,9 @@ export abstract class   ServiceBase<
     state: StateProviderOf<Providers>,
     events: EventsProviderOf<Providers>,
     client: Client,
+    brands: symbol[],
   ) {
+    this[_BRANDS_] = brands;
     this.name = name;
 
     this.actions = actions;

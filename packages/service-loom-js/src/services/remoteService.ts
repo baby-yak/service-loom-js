@@ -1,5 +1,5 @@
 import { RemoteActionExecuter } from '../actions/index.js';
-import { _BRAND_REMOTE_SERVICE_, _BRAND_REMOTE_SERVICE_CLIENT_ } from '../core/internal/symbols.js';
+import { _REMOTE_SERVICE_, _REMOTE_SERVICE_CLIENT_ } from '../core/internal/symbols.js';
 import { EventEmitter } from '../events/eventEmitter.js';
 import { RemoteState } from '../state/index.js';
 import { ServiceChannelManager } from '../transport/internal/serviceChannelManager.js';
@@ -9,7 +9,6 @@ import { ServiceClientBase } from './internal/serviceClientBase.js';
 import type {
   ActionsOfWithFallback,
   EventsOfWithFallback,
-  StateArgs,
   StateOfWithFallback,
 } from './internal/types.js';
 import type { ServiceDescriptor } from './types.js';
@@ -30,9 +29,7 @@ type Providers<Descriptor extends ServiceDescriptor<any>> = {
 
 export class RemoteServiceClient<
   Descriptor extends ServiceDescriptor<any>,
-> extends ServiceClientBase<Providers<Descriptor>> {
-  readonly [_BRAND_REMOTE_SERVICE_CLIENT_] = true;
-}
+> extends ServiceClientBase<Providers<Descriptor>> {}
 
 //-------------------------------------------------------
 //-- service
@@ -43,12 +40,14 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
   Providers<Descriptor>,
   RemoteServiceClient<Descriptor>
 > {
-  readonly [_BRAND_REMOTE_SERVICE_] = true;
-
   private channelManager: ServiceChannelManager;
 
   constructor(name: string, channel: ServiceChannel) {
-    const actions = new RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>();
+    const actions = new RemoteActionExecuter<ActionsOfWithFallback<Descriptor>>({
+      onAction(action, ...args) {
+        return Promise.reject(new Error(`Action [${String(action)}] not implemented`));
+      },
+    });
     const state = new RemoteState<StateOfWithFallback<Descriptor>>();
     const events = new EventEmitter<EventsOfWithFallback<Descriptor>>();
 
@@ -57,9 +56,10 @@ export abstract class RemoteService<Descriptor extends ServiceDescriptor<any>> e
       actions.invoke,
       state.client,
       events.client,
+      [_REMOTE_SERVICE_CLIENT_],
     );
 
-    super(name, actions, state, events, client);
+    super(name, actions, state, events, client, [_REMOTE_SERVICE_]);
 
     this.channelManager = new ServiceChannelManager(this, name, channel);
   }

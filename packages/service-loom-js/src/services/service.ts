@@ -1,7 +1,7 @@
 import { ActionExecuter } from '../actions/index.js';
 import {
-  _BRAND_SERVICE_,
-  _BRAND_SERVICE_CLIENT_,
+  _SERVICE_,
+  _SERVICE_CLIENT_,
   _DEPENDENCIES_,
 } from '../core/internal/symbols.js';
 import type { Empty } from '../core/types.js';
@@ -44,9 +44,7 @@ type Providers<Descriptor extends ServiceDescriptor<any>> = {
 
 export class ServiceClient<Descriptor extends ServiceDescriptor<any>> extends ServiceClientBase<
   Providers<Descriptor>
-> {
-  readonly [_BRAND_SERVICE_CLIENT_] = true;
-}
+> {}
 
 //-------------------------------------------------------
 //-- service
@@ -56,8 +54,6 @@ export abstract class Service<
   Descriptor extends ServiceDescriptor<any>,
   Deps extends ModuleDescriptor | Module<any> = Empty,
 > extends ServiceBase<Descriptor, Providers<Descriptor>, ServiceClient<Descriptor>> {
-  readonly [_BRAND_SERVICE_] = true;
-
   private hostManager: ServiceHostManager<any> | undefined;
 
   [_DEPENDENCIES_]: ModuleClients<DepsFrom<Deps>> | undefined;
@@ -77,9 +73,10 @@ export abstract class Service<
       actions.invoke,
       state.client,
       events.client,
+      [_SERVICE_CLIENT_],
     );
 
-    super(name, actions, state, events, client);
+    super(name, actions, state, events, client, [_SERVICE_]);
 
     this.actions.setHandler(this as any as ActionsOfWithFallback<Descriptor>);
     this.invoke = this.actions.invoke;
