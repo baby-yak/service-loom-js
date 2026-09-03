@@ -32,6 +32,9 @@ const DEFAULT_OPTIONS: Required<ReactiveStateParams> = {
   listenersErrorHandling: "warn",
 };
 
+/** guard against a listener that keeps setting the state - a logic loop */
+const MAX_SET_DEPTH = 1_000;
+
 /**
  * Reactive state container backed by [immer](https://immerjs.github.io/immer/).
  *
@@ -54,6 +57,13 @@ export class ReactiveState<S> implements RawStateProvider<S> {
   private _state: S;
   private _listeners: ListenerContainer<S>[];
   private _options: Required<ReactiveStateParams>;
+
+  private _set_depth = 0;
+  private _set_running = false;
+  private _set_postOperations: {
+    kind: "set" | "update";
+    run: () => void;
+  }[] = [];
 
   /**
    * Returns a {@link StateClient} facade that exposes only the read-only interface.
@@ -91,13 +101,56 @@ export class ReactiveState<S> implements RawStateProvider<S> {
 
   /** Replaces the state. No-ops if the new value is the same reference (`Object.is`). */
   set(state: S): void {
-    const prev = this._state;
-    if (Object.is(prev, state)) return;
+    // a set/update from inside a listener is stacked and run once the
+    // current notification pass is done - so listeners never see a stale state.
+    if (this._set_running) {
+      this._set_postOperations.push({
+        kind: "set",
+        run: () => this.set(state),
+      });
+      return;
+    }
 
-    this._state = state;
-    const listeners = [...this._listeners];
-    for (const container of listeners) {
-      container.listener(state, prev);
+    // nothing to notify and nothing to stack - bail out before taking the lock
+    if (Object.is(this._state, state)) return;
+
+    this._set_running = true;
+    this._set_depth++;
+
+    try {
+      if (this._set_depth > MAX_SET_DEPTH) {
+        throw new Error(
+          `set state overflow... (called ${this._set_depth} time) do you have a logic loop?`,
+        );
+      }
+
+      const prev = this._state;
+      this._state = state;
+
+      // listeners are wrapped by subscribe() - they already apply
+      // the configured listenersErrorHandling, so no try/catch here.
+      const listeners = [...this._listeners];
+      for (const container of listeners) {
+        container.listener(state, prev);
+      }
+
+      // release the lock before draining, so the stacked work
+      // sees the settled state and can stack its own follow-ups.
+      this._set_running = false;
+
+      //left overs from locked set?
+      const postOps = this._set_postOperations.splice(0);
+      for (const job of postOps) {
+        job.run();
+      }
+    } finally {
+      // must always release - an early return or a throw here would
+      // otherwise wedge the instance and silently swallow every later set.
+      this._set_running = false;
+      this._set_depth--;
+      if (this._set_depth === 0) {
+        this._set_postOperations.length = 0;
+      }
     }
   }
 
@@ -137,6 +190,14 @@ export class ReactiveState<S> implements RawStateProvider<S> {
    * > for direct replacement use {@link set}.
    */
   update(recipe: Partial<S> | ((draft: Draft<S>) => void)): void {
+    if (this._set_running) {
+      this._set_postOperations.push({
+        kind: "update",
+        run: () => this.update(recipe),
+      });
+      return;
+    }
+
     const prev = this._state;
     let next: S;
     if (typeof recipe === "function") {
@@ -163,6 +224,14 @@ export class ReactiveState<S> implements RawStateProvider<S> {
    * - **Pure reducer** — receives the current (deeply readonly) state and must return the new state.
    */
   updatePure(state: Partial<S> | ((state: S) => S)): void {
+    if (this._set_running) {
+      this._set_postOperations.push({
+        kind: "update",
+        run: () => this.updatePure(state),
+      });
+      return;
+    }
+
     const prev = this._state;
     const next: S =
       typeof state === "function"

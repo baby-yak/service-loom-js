@@ -216,6 +216,104 @@ describe("ReactiveState", () => {
   });
 
   //-------------------------------------------------------
+  //-- recursive set / update (a listener that sets the state)
+  //-------------------------------------------------------
+
+  describe("recursive set / update", () => {
+    it("listeners never see a stale state when a listener updates it", () => {
+      const s = new ReactiveState({ a: 0, b: 0 });
+      const seen: { a: number; b: number }[] = [];
+
+      s.subscribe((st) => {
+        seen.push({ ...st });
+        if (st.a === 1 && st.b === 0) {
+          s.update((d) => {
+            d.b = 5;
+          });
+        }
+      });
+
+      s.update((d) => {
+        d.a = 1;
+      });
+
+      expect(s.get()).toEqual({ a: 1, b: 5 });
+      // the stacked update is replayed to every listener
+      expect(seen.at(-1)).toEqual({ a: 1, b: 5 });
+    });
+
+    it("stacked update recomputes from the settled state, not the stale one", () => {
+      const s = new ReactiveState({ n: 0, seed: 0 });
+      let fired = false;
+
+      s.subscribe((st) => {
+        if (st.seed === 1 && !fired) {
+          fired = true;
+          // the recipe must run against n as it is *after* this pass (3),
+          // not against the value it had when the recipe was stacked (0)
+          s.update((d) => {
+            d.n = d.n + 10;
+          });
+        }
+      });
+
+      s.update((d) => {
+        d.seed = 1;
+        d.n = 3;
+      });
+
+      expect(s.get()).toEqual({ n: 13, seed: 1 });
+    });
+
+    it("a no-op set does not wedge the instance", () => {
+      const same = { x: 1 };
+      const s = new ReactiveState(same);
+
+      s.set(same); // Object.is - no change
+      s.set({ x: 2 }); // must still go through
+
+      expect(s.get()).toEqual({ x: 2 });
+    });
+
+    it("a no-op immer update does not wedge the instance", () => {
+      const s = new ReactiveState({ x: 1 });
+
+      s.update(() => {
+        // no mutation
+      });
+      s.update({ x: 2 });
+
+      expect(s.get()).toEqual({ x: 2 });
+    });
+
+    it("a runaway set loop throws instead of hanging", () => {
+      const s = new ReactiveState({ n: 0 }, { listenersErrorHandling: "throw" });
+      let loop = false;
+      s.subscribe((st) => {
+        if (loop) s.set({ n: st.n + 1 });
+      });
+
+      loop = true;
+      expect(() => s.set({ n: 1 })).toThrow(/overflow/);
+    });
+
+    it("the instance is still usable after a runaway loop throws", () => {
+      const s = new ReactiveState({ n: 0 }, { listenersErrorHandling: "throw" });
+      let loop = false;
+      s.subscribe((st) => {
+        if (loop) s.set({ n: st.n + 1 });
+      });
+
+      loop = true;
+      expect(() => s.set({ n: 1 })).toThrow(/overflow/);
+
+      loop = false;
+      s.set({ n: 42 });
+      expect(s.get()).toEqual({ n: 42 });
+    });
+  });
+
+  //-------------------------------------------------------
   //-- error handling
   //-------------------------------------------------------
 
@@ -277,6 +375,26 @@ describe("ReactiveState", () => {
       const handler = vi.fn();
       const s = new ReactiveState(0, { listenersErrorHandling: handler });
       s.subscribe(throwingListener);
+      expect(handler).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it("throw — also rethrows for an error raised during set()", () => {
+      const s = new ReactiveState({ x: 0 }, { listenersErrorHandling: "throw" });
+      s.subscribe((st) => {
+        if (st.x > 0) throw new Error("boom");
+      });
+      expect(() => s.set({ x: 1 })).toThrow("boom");
+    });
+
+    it("is applied to selector subscriptions too", () => {
+      const handler = vi.fn();
+      const s = new ReactiveState({ x: 0 }, { listenersErrorHandling: handler });
+      const sel = s.select((st) => st.x);
+      sel.subscribe((v) => {
+        if (v > 0) throw new Error("boom");
+      });
+
+      s.set({ x: 1 });
       expect(handler).toHaveBeenCalledWith(expect.any(Error));
     });
   });

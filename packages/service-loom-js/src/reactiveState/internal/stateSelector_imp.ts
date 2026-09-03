@@ -1,6 +1,6 @@
-import type { UnsubscribeFn } from '../../core/types.js';
-import type { ReactiveStateClient } from '../reactiveStateClient.js';
-import type { StateListener, StateSelectFn } from '../types.js';
+import type { UnsubscribeFn } from "../../core/types.js";
+import type { ReactiveStateClient } from "../reactiveStateClient.js";
+import type { StateListener, StateSelectFn } from "../types.js";
 
 export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
   private source: ReactiveStateClient<S>;
@@ -51,6 +51,8 @@ export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
       const listener_prev = prev;
       prev = selected;
 
+      // no try/catch - the source wraps this whole callback and applies
+      // the configured listenersErrorHandling to whatever escapes it.
       listener(selected, listener_prev);
     });
   }
