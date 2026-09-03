@@ -46,8 +46,12 @@ export class StateSelector_imp<S, U> implements ReactiveStateClient<U> {
         return;
       }
 
-      listener(selected, prev);
+      // to avoid a stale prev value if the listener changes the state synchronously
+      // (state update recursion) - do the swap now, keeping listener_prev for the listener call.
+      const listener_prev = prev;
       prev = selected;
+
+      listener(selected, listener_prev);
     });
   }
   select<W>(selector: StateSelectFn<U, W>): ReactiveStateClient<W> {

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ReactiveState } from '../reactiveState/reactiveState.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ReactiveState } from "../reactiveState/reactiveState.js";
 
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
@@ -7,13 +7,13 @@ import { ReactiveState } from '../reactiveState/reactiveState.js';
 // ---------------------------------------------------------------------------
 // ---------------------------------------------------------------------------
 
-describe('ReactiveState', () => {
+describe("ReactiveState", () => {
   //-------------------------------------------------------
   //-- GET
   //-------------------------------------------------------
 
-  describe('get', () => {
-    it('returns the initial state', () => {
+  describe("get", () => {
+    it("returns the initial state", () => {
       const s = new ReactiveState({ x: 1 });
       expect(s.get()).toEqual({ x: 1 });
     });
@@ -23,20 +23,20 @@ describe('ReactiveState', () => {
   //-- GET INITIAL STATE
   //-------------------------------------------------------
 
-  describe('getInitialState', () => {
-    it('returns the initial value after state has changed', () => {
+  describe("getInitialState", () => {
+    it("returns the initial value after state has changed", () => {
       const s = new ReactiveState({ x: 1 });
       s.set({ x: 99 });
       expect(s.get()).toEqual({ x: 99 });
       expect(s.getInitialState()).toEqual({ x: 1 });
     });
 
-    it('returns the same value as get() before any changes', () => {
+    it("returns the same value as get() before any changes", () => {
       const s = new ReactiveState({ x: 1 });
       expect(s.getInitialState()).toEqual(s.get());
     });
 
-    it('is available on a client facade', () => {
+    it("is available on a client facade", () => {
       const s = new ReactiveState({ x: 1 });
       const source = s.client;
       s.set({ x: 99 });
@@ -48,14 +48,14 @@ describe('ReactiveState', () => {
   //-- SET
   //-------------------------------------------------------
 
-  describe('set', () => {
-    it('updates state', () => {
+  describe("set", () => {
+    it("updates state", () => {
       const s = new ReactiveState({ x: 1 });
       s.set({ x: 2 });
       expect(s.get()).toEqual({ x: 2 });
     });
 
-    it('notifies listeners', () => {
+    it("notifies listeners", () => {
       const s = new ReactiveState({ x: 1 });
       const fn = vi.fn();
       s.subscribe(fn);
@@ -69,7 +69,7 @@ describe('ReactiveState', () => {
       expect(fn).toHaveBeenCalledWith({ x: 2 }, { x: 1 });
     });
 
-    it('does not notify when reference is unchanged (Object.is)', () => {
+    it("does not notify when reference is unchanged (Object.is)", () => {
       const state = { x: 1 };
       const s = new ReactiveState(state);
       const fn = vi.fn();
@@ -85,8 +85,8 @@ describe('ReactiveState', () => {
   //-- subscribe
   //-------------------------------------------------------
 
-  describe('subscribe', () => {
-    it('calls listener immediately with prev = undefined', () => {
+  describe("subscribe", () => {
+    it("calls listener immediately with prev = undefined", () => {
       const s = new ReactiveState({ x: 1 });
       const fn = vi.fn();
       s.subscribe(fn);
@@ -94,7 +94,7 @@ describe('ReactiveState', () => {
       expect(fn).toHaveBeenCalledWith({ x: 1 }, undefined);
     });
 
-    it('calls listener with current and previous state on change', () => {
+    it("calls listener with current and previous state on change", () => {
       const s = new ReactiveState({ x: 1 });
       const fn = vi.fn();
       s.subscribe(fn);
@@ -104,7 +104,7 @@ describe('ReactiveState', () => {
       expect(fn).toHaveBeenCalledWith({ x: 2 }, { x: 1 });
     });
 
-    it('returns an unsubscribe function that stops notifications', () => {
+    it("returns an unsubscribe function that stops notifications", () => {
       const s = new ReactiveState({ x: 1 });
       const fn = vi.fn();
       const unsub = s.subscribe(fn);
@@ -115,7 +115,7 @@ describe('ReactiveState', () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it('handles unsubscribe during notification (snapshot)', () => {
+    it("handles unsubscribe during notification (snapshot)", () => {
       const s = new ReactiveState({ x: 1 });
       let unsub: (() => void) | undefined = undefined;
       const fn = vi.fn(() => unsub?.());
@@ -128,7 +128,7 @@ describe('ReactiveState', () => {
       expect(fn).toHaveBeenCalledOnce();
     });
 
-    it('multiple listeners all receive the update', () => {
+    it("multiple listeners all receive the update", () => {
       const s = new ReactiveState(0);
       const a = vi.fn();
       const b = vi.fn();
@@ -142,7 +142,7 @@ describe('ReactiveState', () => {
       expect(b).toHaveBeenCalledOnce();
     });
 
-    it('calling unsub twice does not throw', () => {
+    it("calling unsub twice does not throw", () => {
       const s = new ReactiveState({ x: 1 });
       const unsub = s.subscribe(() => {});
       unsub();
@@ -156,14 +156,14 @@ describe('ReactiveState', () => {
   //-- update
   //-------------------------------------------------------
 
-  describe('update', () => {
-    it('shallow-merges a Partial', () => {
+  describe("update", () => {
+    it("shallow-merges a Partial", () => {
       const s = new ReactiveState({ x: 1, y: 2 });
       s.update({ x: 9 });
       expect(s.get()).toEqual({ x: 9, y: 2 });
     });
 
-    it('deep-mutates via immer recipe', () => {
+    it("deep-mutates via immer recipe", () => {
       const s = new ReactiveState({ a: { x: 1, y: 2 } });
       s.update((draft) => {
         draft.a.x = 9;
@@ -171,29 +171,29 @@ describe('ReactiveState', () => {
       expect(s.get()).toEqual({ a: { x: 9, y: 2 } });
     });
 
-    it('replaces array state with Partial value', () => {
+    it("replaces array state with Partial value", () => {
       const s = new ReactiveState([1, 2, 3]);
       s.update([9, 9, 9]);
       expect(s.get()).toEqual([9, 9, 9]);
     });
 
-    it('throws when using a recipe on primitive state', () => {
+    it("throws when using a recipe on primitive state", () => {
       const s = new ReactiveState(42 as unknown as object);
       expect(() => {
         s.update(() => {});
-      }).toThrow('set()');
+      }).toThrow("set()");
     });
 
-    it('mutates Map state via immer recipe', () => {
-      const s = new ReactiveState(new Map([['a', 1]]));
+    it("mutates Map state via immer recipe", () => {
+      const s = new ReactiveState(new Map([["a", 1]]));
       s.update((draft) => {
-        draft.set('b', 2);
+        draft.set("b", 2);
       });
-      expect(s.get().get('a')).toBe(1);
-      expect(s.get().get('b')).toBe(2);
+      expect(s.get().get("a")).toBe(1);
+      expect(s.get().get("b")).toBe(2);
     });
 
-    it('mutates Set state via immer recipe', () => {
+    it("mutates Set state via immer recipe", () => {
       const s = new ReactiveState(new Set([1, 2]));
       s.update((draft) => {
         draft.add(3);
@@ -202,7 +202,7 @@ describe('ReactiveState', () => {
       expect(s.get().has(3)).toBe(true);
     });
 
-    it('does not notify when immer recipe produces no change', () => {
+    it("does not notify when immer recipe produces no change", () => {
       const s = new ReactiveState({ x: 1 });
       const fn = vi.fn();
       s.subscribe(fn);
@@ -219,7 +219,7 @@ describe('ReactiveState', () => {
   //-- error handling
   //-------------------------------------------------------
 
-  describe('error handling', () => {
+  describe("error handling", () => {
     let consoleSpy: {
       warn: ReturnType<typeof vi.spyOn>;
       log: ReturnType<typeof vi.spyOn>;
@@ -228,9 +228,9 @@ describe('ReactiveState', () => {
 
     beforeEach(() => {
       consoleSpy = {
-        warn: vi.spyOn(console, 'warn').mockImplementation(() => {}),
-        log: vi.spyOn(console, 'log').mockImplementation(() => {}),
-        error: vi.spyOn(console, 'error').mockImplementation(() => {}),
+        warn: vi.spyOn(console, "warn").mockImplementation(() => {}),
+        log: vi.spyOn(console, "log").mockImplementation(() => {}),
+        error: vi.spyOn(console, "error").mockImplementation(() => {}),
       };
     });
 
@@ -239,41 +239,41 @@ describe('ReactiveState', () => {
     });
 
     const throwingListener = () => {
-      throw new Error('boom');
+      throw new Error("boom");
     };
 
-    it('warn (default) — logs to console.warn and does not rethrow', () => {
+    it("warn (default) — logs to console.warn and does not rethrow", () => {
       const s = new ReactiveState(0);
       s.subscribe(throwingListener);
       expect(consoleSpy.warn).toHaveBeenCalled();
     });
 
-    it('ignore — silently swallows the error', () => {
-      const s = new ReactiveState(0, { listenersErrorHandling: 'ignore' });
+    it("ignore — silently swallows the error", () => {
+      const s = new ReactiveState(0, { listenersErrorHandling: "ignore" });
       s.subscribe(throwingListener);
       expect(consoleSpy.warn).not.toHaveBeenCalled();
       expect(consoleSpy.log).not.toHaveBeenCalled();
       expect(consoleSpy.error).not.toHaveBeenCalled();
     });
 
-    it('log — logs to console.log', () => {
-      const s = new ReactiveState(0, { listenersErrorHandling: 'log' });
+    it("log — logs to console.log", () => {
+      const s = new ReactiveState(0, { listenersErrorHandling: "log" });
       s.subscribe(throwingListener);
       expect(consoleSpy.log).toHaveBeenCalled();
     });
 
-    it('error — logs to console.error', () => {
-      const s = new ReactiveState(0, { listenersErrorHandling: 'error' });
+    it("error — logs to console.error", () => {
+      const s = new ReactiveState(0, { listenersErrorHandling: "error" });
       s.subscribe(throwingListener);
       expect(consoleSpy.error).toHaveBeenCalled();
     });
 
-    it('throw — rethrows the error', () => {
-      const s = new ReactiveState(0, { listenersErrorHandling: 'throw' });
-      expect(() => s.subscribe(throwingListener)).toThrow('boom');
+    it("throw — rethrows the error", () => {
+      const s = new ReactiveState(0, { listenersErrorHandling: "throw" });
+      expect(() => s.subscribe(throwingListener)).toThrow("boom");
     });
 
-    it('function — calls the provided handler', () => {
+    it("function — calls the provided handler", () => {
       const handler = vi.fn();
       const s = new ReactiveState(0, { listenersErrorHandling: handler });
       s.subscribe(throwingListener);
@@ -287,8 +287,8 @@ describe('ReactiveState', () => {
   //-------------------------------------------------------
   //-------------------------------------------------------
 
-  describe('client', () => {
-    it('returned StateSource reflects state changes', () => {
+  describe("client", () => {
+    it("returned StateSource reflects state changes", () => {
       const s = new ReactiveState({ x: 1 });
       const source = s.client;
 
@@ -296,7 +296,7 @@ describe('ReactiveState', () => {
       expect(source.get()).toEqual({ x: 2 });
     });
 
-    it('returned StateSource notifies on change', () => {
+    it("returned StateSource notifies on change", () => {
       const s = new ReactiveState({ x: 1 });
       const source = s.client;
       const fn = vi.fn();
@@ -307,7 +307,7 @@ describe('ReactiveState', () => {
       expect(fn).toHaveBeenCalledOnce();
     });
 
-    it('select() works on a StateSource facade', () => {
+    it("select() works on a StateSource facade", () => {
       const s = new ReactiveState({ x: 1, y: 0 });
       const source = s.client;
       const sel = source.select((state) => state.x);
@@ -327,26 +327,26 @@ describe('ReactiveState', () => {
 // ---------------------------------------------------------------------------
 // ReactiveState updatePure option
 // ---------------------------------------------------------------------------
-describe('ReactiveStatePure', () => {
-  it('shallow-merges a Partial on plain object state', () => {
+describe("ReactiveStatePure", () => {
+  it("shallow-merges a Partial on plain object state", () => {
     const s = new ReactiveState({ x: 1, y: 2 });
     s.updatePure({ x: 9 });
     expect(s.get()).toEqual({ x: 9, y: 2 });
   });
 
-  it('applies a pure reducer function', () => {
+  it("applies a pure reducer function", () => {
     const s = new ReactiveState({ x: 1, y: 2 });
     s.updatePure((state) => ({ ...state, x: state.x + 1 }));
     expect(s.get()).toEqual({ x: 2, y: 2 });
   });
 
-  it('replaces non-object state via Partial', () => {
+  it("replaces non-object state via Partial", () => {
     const s = new ReactiveState([1, 2, 3]);
     s.updatePure([9, 9, 9]);
     expect(s.get()).toEqual([9, 9, 9]);
   });
 
-  it('does not notify when reducer returns same reference', () => {
+  it("does not notify when reducer returns same reference", () => {
     const state = { x: 1 };
     const s = new ReactiveState(state);
     const fn = vi.fn();
@@ -357,7 +357,7 @@ describe('ReactiveStatePure', () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it('subscribe, select, client all work', () => {
+  it("subscribe, select, client all work", () => {
     const s = new ReactiveState({ x: 1, y: 0 });
     const sel = s.select((st) => st.x);
     const fn = vi.fn();
@@ -374,12 +374,12 @@ describe('ReactiveStatePure', () => {
 // StateSelector (via ReactiveState.select)
 // ---------------------------------------------------------------------------
 
-describe('StateSelector', () => {
+describe("StateSelector", () => {
   //-------------------------------------------------------
   //-- StateSelector:get
   //-------------------------------------------------------
-  describe('get', () => {
-    it('returns the selected value', () => {
+  describe("get", () => {
+    it("returns the selected value", () => {
       const s = new ReactiveState({ x: 1, y: 2 });
       const sel = s.select((state) => state.x);
       expect(sel.get()).toBe(1);
@@ -390,8 +390,8 @@ describe('StateSelector', () => {
   //-- StateSelector:getInitialState
   //-------------------------------------------------------
 
-  describe('getInitialState', () => {
-    it('returns the initial selected value after state has changed', () => {
+  describe("getInitialState", () => {
+    it("returns the initial selected value after state has changed", () => {
       const s = new ReactiveState({ x: 1, y: 0 });
       const sel = s.select((state) => state.x);
       s.set({ x: 99, y: 0 });
@@ -399,7 +399,7 @@ describe('StateSelector', () => {
       expect(sel.getInitialState()).toBe(1);
     });
 
-    it('works on chained selectors', () => {
+    it("works on chained selectors", () => {
       const s = new ReactiveState({ a: { b: 42 } });
       const sel = s.select((state) => state.a).select((a) => a.b);
       s.update((draft) => {
@@ -411,8 +411,8 @@ describe('StateSelector', () => {
   //-------------------------------------------------------
   //-- StateSelector:subscribe
   //-------------------------------------------------------
-  describe('subscribe', () => {
-    it('calls listener immediately with prev = undefined', () => {
+  describe("subscribe", () => {
+    it("calls listener immediately with prev = undefined", () => {
       const s = new ReactiveState({ x: 1 });
       const sel = s.select((state) => state.x);
       const fn = vi.fn();
@@ -421,7 +421,7 @@ describe('StateSelector', () => {
       expect(fn).toHaveBeenCalledWith(1, undefined);
     });
 
-    it('calls listener when selected value changes', () => {
+    it("calls listener when selected value changes", () => {
       const s = new ReactiveState({ x: 1, y: 0 });
       const sel = s.select((state) => state.x);
       const fn = vi.fn();
@@ -432,7 +432,7 @@ describe('StateSelector', () => {
       expect(fn).toHaveBeenCalledWith(2, 1);
     });
 
-    it('skips notification when selected value is unchanged (Object.is)', () => {
+    it("skips notification when selected value is unchanged (Object.is)", () => {
       const s = new ReactiveState({ x: 1, y: 0 });
       const sel = s.select((state) => state.x);
       const fn = vi.fn();
@@ -443,7 +443,7 @@ describe('StateSelector', () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it('does not fire for NaN when NaN is unchanged', () => {
+    it("does not fire for NaN when NaN is unchanged", () => {
       const s = new ReactiveState({ v: NaN });
       const sel = s.select((state) => state.v);
       const fn = vi.fn();
@@ -454,7 +454,7 @@ describe('StateSelector', () => {
       expect(fn).not.toHaveBeenCalled();
     });
 
-    it('unsubscribe stops notifications', () => {
+    it("unsubscribe stops notifications", () => {
       const s = new ReactiveState({ x: 1 });
       const sel = s.select((state) => state.x);
       const fn = vi.fn();
@@ -465,20 +465,95 @@ describe('StateSelector', () => {
       s.set({ x: 2 });
       expect(fn).not.toHaveBeenCalled();
     });
+
+    //-------------------------------------------------------
+    //-- StateSelector:subscribe - recursive updates from the listener
+    //-------------------------------------------------------
+
+    it("does not re-notify when the listener updates an unrelated slice", () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const calls: [number, number | undefined][] = [];
+
+      //react to s.x:
+      s.select((state) => state.x).subscribe((value, prev) => {
+        calls.push([value, prev]);
+        // update an unrelated part of the state tree, once
+        if (s.get().y === 0) {
+          s.update((draft) => {
+            draft.y = 99;
+          });
+        }
+      });
+
+      // x never changed - the listener must not be called a second time
+      expect(calls).toEqual([[1, undefined]]);
+    });
+
+    it("passes the correct prev when the listener updates the selected value", () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+      const calls: [number, number | undefined][] = [];
+
+      //react to s.x:
+      s.select((state) => state.x).subscribe((value, prev) => {
+        calls.push([value, prev]);
+        if (value < 3) {
+          s.update((draft) => {
+            draft.x = value + 1;
+          });
+        }
+      });
+
+      expect(calls).toEqual([
+        [1, undefined],
+        [2, 1],
+        [3, 2],
+      ]);
+    });
+
+    it("keeps prev in sync after a recursive update unwinds", () => {
+      const s = new ReactiveState({ x: 1, y: 0 });
+
+      const calls: [number, number | undefined][] = [];
+      let recurse = true;
+
+      //react to s.x:
+      const unsub = s
+        .select((state) => state.x)
+        .subscribe((value, prev) => {
+          calls.push([value, prev]);
+          if (recurse && value < 3) {
+            s.update((draft) => {
+              draft.x = value + 1;
+            });
+          }
+        });
+
+      // stop recursing - only the state left behind by the recursion matters now
+      recurse = false;
+      calls.length = 0;
+
+      // last seen value is 3 - going back to 1 must notify with prev = 3
+      s.update((draft) => {
+        draft.x = 1;
+      });
+      expect(calls).toEqual([[1, 3]]);
+
+      unsub();
+    });
   });
 
   //-------------------------------------------------------
   //-- StateSelector:select (chained)
   //-------------------------------------------------------
 
-  describe('select (chained)', () => {
-    it('chains selectors correctly', () => {
+  describe("select (chained)", () => {
+    it("chains selectors correctly", () => {
       const s = new ReactiveState({ a: { b: 42 } });
       const sel = s.select((state) => state.a).select((a) => a.b);
       expect(sel.get()).toBe(42);
     });
 
-    it('chained selector fires only when its value changes', () => {
+    it("chained selector fires only when its value changes", () => {
       const s = new ReactiveState({ a: { b: 1 }, c: 0 });
       const sel = s.select((state) => state.a).select((a) => a.b);
       const fn = vi.fn();
